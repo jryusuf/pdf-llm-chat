@@ -1,4 +1,4 @@
-import pytest
+import sys
 import pytest_asyncio
 import uuid
 from datetime import datetime, timezone
@@ -32,9 +32,7 @@ async def async_engine():
 @pytest_asyncio.fixture(scope="function")
 async def async_session(async_engine):
     """Fixture for providing an asynchronous session with rollback."""
-    async_session_maker = async_sessionmaker(
-        async_engine, expire_on_commit=False, class_=AsyncSession
-    )
+    async_session_maker = async_sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
     async with async_session_maker() as session:
         yield session
         await session.rollback()

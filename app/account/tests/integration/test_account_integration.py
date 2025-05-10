@@ -74,9 +74,7 @@ async def test_get_by_id(user_repository: SQLAlchemyUserRepository):
 @pytest.mark.asyncio
 async def test_get_by_id_not_found(user_repository: SQLAlchemyUserRepository):
     """Test retrieving a non-existent user by ID."""
-    fetched_user = await user_repository.get_by_id(
-        999
-    )  # Assuming ID 999 does not exist
+    fetched_user = await user_repository.get_by_id(999)  # Assuming ID 999 does not exist
     assert fetched_user is None
 
 

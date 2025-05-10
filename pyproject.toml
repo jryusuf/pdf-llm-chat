@@ -16,7 +16,7 @@ dependencies = [
 ] # Add dependencies here later
 
 [tool.ruff]
-line-length = 88
+line-length =108
 target-version = "py312"
 lint.select = [
     "E",  # Error
@@ -51,3 +51,4 @@ find = { include = ["app*"] }
 
 [tool.pytest.ini_options]
 testpaths = ["app/account/tests/unit", "app/account/tests/integration"]
+pythonpath = "."

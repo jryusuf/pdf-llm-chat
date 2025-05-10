@@ -53,9 +53,7 @@ async def test_register_user_success(
     user_repository: SQLAlchemyUserRepository,
 ):
     """Test successful user registration."""
-    user_data = UserCreateRequest(
-        email="register@example.com", password="securepassword123"
-    )
+    user_data = UserCreateRequest(email="register@example.com", password="securepassword123")
     response = await account_service.register_user(user_data)
 
     assert isinstance(response, UserRegisteredResponse)
@@ -82,17 +80,13 @@ async def test_register_user_already_exists(
         await account_service.register_user(user_data)
 
 
-@pytest.mark.skip(
-    reason="Test failing due to environment not picking up latest code changes"
-)
+@pytest.mark.skip(reason="Test failing due to environment not picking up latest code changes")
 @pytest.mark.asyncio
 async def test_register_user_password_too_short(
     account_service: AccountApplicationService,
 ):
     """Test user registration with a password that is too short."""
-    user_data = UserCreateRequest(
-        email="shortpass@example.com", password="short"
-    )  # Less than 8 chars
+    user_data = UserCreateRequest(email="shortpass@example.com", password="short")  # Less than 8 chars
     with pytest.raises(ValidationError):
         await account_service.register_user(user_data)
 
@@ -104,9 +98,7 @@ async def test_login_user_success(
 ):
     """Test successful user login."""
     # Add a user first
-    user_domain = await add_user_via_repo(
-        user_repository, "login@example.com", "loginpassword"
-    )
+    user_domain = await add_user_via_repo(user_repository, "login@example.com", "loginpassword")
 
     login_data = UserLoginRequest(email="login@example.com", password="loginpassword")
     response = await account_service.login_user(login_data)
@@ -118,9 +110,7 @@ async def test_login_user_success(
 
     # Verify the token payload
     try:
-        payload = jwt.decode(
-            response.access_token, JWT_SECRET_KEY, algorithms=[ALGORITHM]
-        )
+        payload = jwt.decode(response.access_token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         assert payload.get("sub") == str(user_domain.user_uuid)
         assert "exp" in payload
         # Check expiration is in the future (with a small tolerance)
@@ -147,9 +137,7 @@ async def test_login_user_invalid_password(
     """Test user login with an invalid password."""
     await add_user_via_repo(user_repository, "wrongpass@example.com", "correctpassword")
 
-    login_data = UserLoginRequest(
-        email="wrongpass@example.com", password="wrongpassword"
-    )
+    login_data = UserLoginRequest(email="wrongpass@example.com", password="wrongpassword")
     with pytest.raises(InvalidCredentialsError):
         await account_service.login_user(login_data)
 
@@ -160,9 +148,7 @@ async def test_login_user_inactive(
     user_repository: SQLAlchemyUserRepository,
 ):
     """Test user login with an inactive user."""
-    user_domain = create_dummy_domain_user(
-        email="inactive@example.com", plain_password="password"
-    )
+    user_domain = create_dummy_domain_user(email="inactive@example.com", plain_password="password")
     user_domain.is_active = False  # Set to inactive
     await user_repository.add(user_domain)
 
@@ -177,13 +163,9 @@ async def test_get_user_by_uuid_for_auth_success(
     user_repository: SQLAlchemyUserRepository,
 ):
     """Test retrieving an active user by UUID for authentication."""
-    user_domain = await add_user_via_repo(
-        user_repository, "auth@example.com", "password"
-    )
+    user_domain = await add_user_via_repo(user_repository, "auth@example.com", "password")
 
-    fetched_user = await account_service.get_user_by_uuid_for_auth(
-        str(user_domain.user_uuid)
-    )
+    fetched_user = await account_service.get_user_by_uuid_for_auth(str(user_domain.user_uuid))
     assert fetched_user is not None
     assert fetched_user.user_uuid == user_domain.user_uuid
     assert fetched_user.is_active is True
@@ -204,15 +186,11 @@ async def test_get_user_by_uuid_for_auth_inactive(
     user_repository: SQLAlchemyUserRepository,
 ):
     """Test retrieving an inactive user by UUID for authentication."""
-    user_domain = create_dummy_domain_user(
-        email="authinactive@example.com", plain_password="password"
-    )
+    user_domain = create_dummy_domain_user(email="authinactive@example.com", plain_password="password")
     user_domain.is_active = False  # Set to inactive
     await user_repository.add(user_domain)
 
-    fetched_user = await account_service.get_user_by_uuid_for_auth(
-        str(user_domain.user_uuid)
-    )
+    fetched_user = await account_service.get_user_by_uuid_for_auth(str(user_domain.user_uuid))
     assert fetched_user is None
 
 
@@ -221,7 +199,5 @@ async def test_get_user_by_uuid_for_auth_invalid_format(
     account_service: AccountApplicationService,
 ):
     """Test retrieving a user with an invalid UUID format for authentication."""
-    fetched_user = await account_service.get_user_by_uuid_for_auth(
-        "invalid-uuid-format"
-    )
+    fetched_user = await account_service.get_user_by_uuid_for_auth("invalid-uuid-format")
     assert fetched_user is None

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 # Import routers from feature modules
-# from .account import router as account_router
+from .account.controller.routers import router as account_router
 # from .pdf import router as pdf_router
 # from .chat import router as chat_router
 
@@ -15,7 +15,7 @@ def read_root():
 
 
 # Include feature routers
-# app.include_router(account_router, prefix="/account", tags=["account"])
+app.include_router(account_router, prefix="/account", tags=["account"])
 # app.include_router(pdf_router, prefix="/pdf", tags=["pdf"])
 # app.include_router(chat_router, prefix="/chat", tags=["chat"])
 

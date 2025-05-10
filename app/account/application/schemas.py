@@ -6,9 +6,7 @@ from datetime import datetime
 # --- User Registration ---
 class UserCreateRequest(BaseModel):
     email: EmailStr
-    password: str = Field(
-        min_length=8, description="Password must be at least 8 characters long."
-    )
+    password: str = Field(min_length=8, description="Password must be at least 8 characters long.")
 
 
 class UserRegisteredResponse(BaseModel):
