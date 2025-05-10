@@ -11,13 +11,13 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: pytest
+        entry: ./.venv/bin/pytest
         language: system
         types: [python]
         pass_filenames: false
       - id: behave
         name: behave
-        entry: behave
+        entry: ./.venv/bin/behave
         language: system
         types: [python]
         pass_filenames: false

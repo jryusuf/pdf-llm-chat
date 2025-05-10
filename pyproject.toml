@@ -32,6 +32,8 @@ ignore = [
 [dependency-groups]
 dev = [
     "behave>=1.2.6",
+    "fastapi>=0.115.12",
+    "httpx>=0.28.1",
     "pytest>=8.3.5",
 ]
 # uv specific configurations can go here
