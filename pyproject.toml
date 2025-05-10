@@ -28,4 +28,10 @@ ignore = [
 
 
 [tool.uv]
+
+[dependency-groups]
+dev = [
+    "behave>=1.2.6",
+    "pytest>=8.3.5",
+]
 # uv specific configurations can go here

@@ -7,3 +7,17 @@ repos:
         exclude: ^todo\.yaml$
       - id: ruff-format
         exclude: ^todo\.yaml$
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: behave
+        name: behave
+        entry: behave
+        language: system
+        types: [python]
+        pass_filenames: false
