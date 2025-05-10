@@ -1,0 +1,986 @@
+epics:
+  - ref_id: "E01"
+    name: "User Authentication & Authorization"
+    description: "Enable secure user registration, login, and session management using JWT to protect application resources."
+    features:
+      - ref_id: "E01-F01"
+        name: "User Registration"
+        description: "Allow new users to create an account in the system."
+        user_stories:
+          - ref_id: "E01-F01-S01"
+            persona: "user of the product"
+            i_want: "to register with my email and password"
+            so_that: "I can create a new account and access the application's features."
+            use_cases:
+              - ref_id: "E01-F01-S01-C01"
+                name: "Successful registration"
+                description: "User provides valid email and a password meeting basic criteria. System creates new user, hashes password (e.g., bcrypt), stores credentials securely in PostgreSQL, and returns HTTP 201 Created."
+                prerequisites:
+                  - "E04-F01-S01-C01" # PostgreSQL user schema defined
+              - ref_id: "E01-F01-S01-C02"
+                name: "Registration with existing email"
+                description: "User attempts to register with an email that already exists. System returns HTTP 409 Conflict."
+                prerequisites:
+                  - "E01-F01-S02-C01" # Registration endpoint implemented
+                  - "E01-F01-S01-C01" # A user must exist to test existing email scenario
+              - ref_id: "E01-F01-S01-C03"
+                name: "Registration with invalid input"
+                description: "User provides invalid email format or password not meeting basic requirements. System returns HTTP 400 Bad Request."
+                prerequisites:
+                  - "E01-F01-S02-C01" # Registration endpoint implemented (to process input)
+          - ref_id: "E01-F01-S02"
+            persona: "developer"
+            i_want: "to implement the POST /register endpoint using FastAPI, SQLAlchemy (async), and appropriate password hashing"
+            so_that: "new users can be created, their passwords hashed securely, and credentials stored in PostgreSQL as per the defined user schema."
+            use_cases:
+              - ref_id: "E01-F01-S02-C01"
+                name: "Endpoint implementation & data validation for registration"
+                description: "Implement /register route in the 'account' feature folder. Validate Pydantic request model (email, password). Use SQLAlchemy async session and User repository for persistence. Hash password using `passlib` (e.g., bcrypt) with a per-user salt."
+                prerequisites:
+                  - "E04-F01-S01-C01" # PostgreSQL user schema defined & migration run
+                  - "E05-F01-S01-C01" # Feature-based directory structure in place
+                  - "E05-F01-S01-C02" # User Repository Interface & Implementation defined
+                  - "E05-F02-S01-C01" # Ruff configured
+                  - "E04-F04-S01-C01" # Dockerfile basic setup (for env consistency of DB access)
+                  - "E04-F03-S02-C01" # Basic FastAPI app setup for routing
+              - ref_id: "E01-F01-S02-C02"
+                name: "Secure password hashing mechanism and storage"
+                description: "Ensure `passlib` is used correctly for hashing passwords before storing them in the `users` table in PostgreSQL. Verify storage format."
+                prerequisites:
+                  - "E01-F01-S02-C01" # Basic endpoint for registration implemented
+              - ref_id: "E01-F01-S02-C03"
+                name: "Error handling specific to registration"
+                description: "Implement specific error responses within the /register endpoint logic for duplicate emails (querying DB), validation errors from Pydantic, and database interaction errors, returning correct HTTP status codes (409, 422, 500)."
+                prerequisites:
+                  - "E01-F01-S02-C01" # Basic endpoint implemented
+                  - "E04-F03-S02-C01" # FastAPI global exception handler base for unhandled
+          - ref_id: "E01-F01-S03"
+            persona: "product owner"
+            i_want: "user registration to be secure, reliably store user data in PostgreSQL, and follow basic security practices for passwords"
+            so_that: "we can confidently onboard new users and meet data storage requirements for user credentials."
+            use_cases:
+              - ref_id: "E01-F01-S03-C01"
+                name: "Verify user registration flow and secure data storage"
+                description: "Test the end-to-end registration process. Confirm user data (email, correctly hashed password) is stored in PostgreSQL. Ensure password is not retrievable in plaintext."
+                prerequisites:
+                  - "E01-F01-S01-C01" # User story for successful registration (to test against)
+                  - "E01-F01-S02-C02" # Dev implementation of secure password storage completed
+              - ref_id: "E01-F01-S03-C02"
+                name: "Confirm basic password requirements are met and clear"
+                description: "Ensure any minimal password requirements (e.g., length if enforced by backend) are documented and the system behaves as expected. No complex rules required by PDF."
+                prerequisites:
+                  - "E01-F01-S02-C01" # Backend must implement any such requirements
+                  - "E04-F05-S01-C02" # API documentation for /register
+              - ref_id: "E01-F01-S03-C03"
+                name: "Review registration success and failure messages"
+                description: "Check user-facing success messages (e.g., HTTP 201) and failure messages (e.g., for duplicate email, invalid input) for clarity, accuracy, and security (no sensitive information leakage)."
+                prerequisites:
+                  - "E01-F01-S02-C03" # Dev implementation of error handling for registration
+
+      - ref_id: "E01-F02"
+        name: "User Login & JWT Generation"
+        description: "Allow registered users to log in and obtain a JWT for authorizing access to protected resources."
+        user_stories:
+          - ref_id: "E01-F02-S01"
+            persona: "user of the product"
+            i_want: "to log in with my email and password"
+            so_that: "I can receive a JWT token to authenticate myself for subsequent API requests."
+            use_cases:
+              - ref_id: "E01-F02-S01-C01"
+                name: "Successful login with valid credentials"
+                description: "User provides valid registered email and correct password. System verifies credentials against PostgreSQL, generates a JWT, and returns it in the HTTP 200 OK response body."
+                prerequisites:
+                  - "E01-F01-S01-C01" # A user account must be registered
+                  - "E01-F02-S02-C01" # Login endpoint implemented
+                  - "E01-F02-S02-C02" # JWT generation logic implemented
+              - ref_id: "E01-F02-S01-C02"
+                name: "Login attempt with incorrect password"
+                description: "User provides valid registered email but incorrect password. System returns HTTP 401 Unauthorized."
+                prerequisites:
+                  - "E01-F02-S02-C01" # Login endpoint implemented
+              - ref_id: "E01-F02-S01-C03"
+                name: "Login attempt with non-existent email"
+                description: "User attempts to log in with an email not registered in the system. System returns HTTP 401 Unauthorized."
+                prerequisites:
+                  - "E01-F02-S02-C01" # Login endpoint implemented
+          - ref_id: "E01-F02-S02"
+            persona: "developer"
+            i_want: "to implement the POST /login endpoint and JWT generation logic, using an environment variable for the JWT secret key"
+            so_that: "users can authenticate securely, and a standards-compliant JWT (containing user_id and expiration) is generated and returned."
+            use_cases:
+              - ref_id: "E01-F02-S02-C01"
+                name: "Endpoint implementation for login and credential verification"
+                description: "Implement /login route in 'account' feature. Validate Pydantic request model (email, password). Retrieve user from PostgreSQL via User repository. Verify provided password against stored hash using `passlib`. If valid, proceed to generate JWT."
+                prerequisites:
+                  - "E01-F01-S02-C02" # User registration and password hashing logic must be working
+                  - "E05-F01-S01-C02" # User Repository for fetching user by email
+                  - "E04-F05-S01-C03" # README documents JWT_SECRET_KEY env var existence intention
+              - ref_id: "E01-F02-S02-C02"
+                name: "Secure JWT generation and configuration"
+                description: "Implement JWT generation (e.g., using `python-jose` library). Configure JWT: load `JWT_SECRET_KEY` from environment variable, set algorithm (e.g., HS256), define token expiration time (e.g., 1 hour). JWT payload must include 'sub' (user_id) and 'exp' (expiration timestamp) claims."
+                prerequisites:
+                  - "E01-F02-S02-C01" # Basic login endpoint structure implemented
+              - ref_id: "E01-F02-S02-C03"
+                name: "Error handling specific to login failures"
+                description: "Implement specific error responses within the /login endpoint for invalid credentials (incorrect email/password) or other login issues, returning HTTP 401 Unauthorized."
+                prerequisites:
+                  - "E01-F02-S02-C01" # Basic login endpoint implemented
+                  - "E04-F03-S02-C01" # Global exception handlers for unhandled cases
+          - ref_id: "E01-F02-S03"
+            persona: "product owner"
+            i_want: "JWTs to be securely generated with a configurable secret, have a defined expiration, and be used correctly for protected resources"
+            so_that: "user sessions are managed effectively and securely according to best practices."
+            use_cases:
+              - ref_id: "E01-F02-S03-C01"
+                name: "Define and confirm JWT expiration policy (e.g., 1 hour)"
+                description: "Specify a reasonable JWT validity duration. Confirm this is implemented."
+                prerequisites: 
+                  - "E01-F02-S02-C02" # Developer implements expiration
+              - ref_id: "E01-F02-S03-C02"
+                name: "Verify JWT content (claims) and signature mechanism"
+                description: "Confirm JWT correctly contains essential claims ('sub' for user_id, 'exp' for expiration). Verify a standard, strong signature algorithm (e.g., HS256) is used and the secret key is loaded from an environment variable (not hardcoded)."
+                prerequisites:
+                  - "E01-F02-S02-C02" # JWT generation implementation complete
+              - ref_id: "E01-F02-S03-C03"
+                name: "Confirm API documentation specifies JWT usage for protected routes"
+                description: "Verify that the README.md (API usage examples section) clearly states that the obtained JWT must be included in the 'Authorization: Bearer <token>' header for all protected routes."
+                prerequisites:
+                  - "E04-F05-S01-C02" # README API usage section exists
+                  - "E01-F03-S02-C01" # Auth dependency is planned/implemented
+
+      - ref_id: "E01-F03"
+        name: "Route Protection with JWT"
+        description: "Secure specific API routes, allowing access only to authenticated users with a valid JWT."
+        user_stories:
+          - ref_id: "E01-F03-S01"
+            persona: "user of the product"
+            i_want: "to access protected features (like PDF management and chat functionalities) only when I am logged in and provide my valid JWT token"
+            so_that: "my data and actions within the application remain secure and private."
+            use_cases:
+              - ref_id: "E01-F03-S01-C01"
+                name: "Successfully access a protected route with a valid token"
+                description: "User includes a valid, non-expired JWT in the 'Authorization: Bearer <token>' header when calling a protected endpoint (e.g., /pdf-upload). System grants access, and the request is processed."
+                prerequisites:
+                  - "E01-F02-S01-C01" # User can successfully log in and obtain a JWT
+                  - "E01-F03-S02-C01" # Authentication dependency/middleware implemented
+                  - "E02-F01-S02-C01" # At least one protected route (e.g., PDF upload endpoint) exists and has protection applied
+              - ref_id: "E01-F03-S01-C02"
+                name: "Attempt to access a protected route with an invalid or expired token"
+                description: "User includes an invalid (e.g., malformed, incorrect signature) or expired JWT in the Authorization header. System denies access and returns an HTTP 401 Unauthorized error."
+                prerequisites:
+                  - "E01-F03-S02-C03" # Token validation error handling in dependency implemented
+              - ref_id: "E01-F03-S01-C03"
+                name: "Attempt to access a protected route without providing a token"
+                description: "User calls a protected endpoint without including the Authorization header or a JWT. System denies access and returns an HTTP 401 Unauthorized error."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Authentication dependency/middleware implemented and applied to a route
+          - ref_id: "E01-F03-S02"
+            persona: "developer"
+            i_want: "to implement JWT-based authentication middleware or dependency using FastAPI's `Depends` system"
+            so_that: "all specified PDF and chat-related routes are protected and require a valid JWT for access, making user context available to the endpoint."
+            use_cases:
+              - ref_id: "E01-F03-S02-C01"
+                name: "Implement reusable authentication dependency"
+                description: "Create a FastAPI dependency (e.g., `get_current_active_user` in `account/dependencies.py`). This dependency will: extract JWT from 'Authorization: Bearer <token>' header, decode it using the `JWT_SECRET_KEY` (from env var), verify signature and expiration, and retrieve user details (e.g., user_id) from token claims. If valid, return user object/id; otherwise, raise HTTPException(401)."
+                prerequisites:
+                  - "E01-F02-S02-C02" # JWT generation logic (including secret key usage) is working
+                  - "E05-F01-S01-C02" # User repository (to fetch user details if needed beyond token sub)
+              - ref_id: "E01-F03-S02-C02"
+                name: "Apply authentication dependency to all specified protected routes"
+                description: "Ensure that all PDF and chat-related routes as listed in the assignment document (`/pdf-upload`, `/pdf-list`, `/pdf-parse`, `/pdf-select`, `/pdf-chat`, `/chat-history`) have this authentication dependency injected. This is an ongoing task as each route is created."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency self created
+                  # Individual route endpoints must be defined first to apply protection. E.g.:
+                  - "E02-F01-S02-C01" # PDF Upload endpoint prerequisite
+                  - "E02-F02-S02-C01" # PDF List endpoint prerequisite
+                  - "E02-F03-S02-C01" # PDF Parse endpoint prerequisite
+                  - "E02-F04-S02-C01" # PDF Select endpoint prerequisite
+                  - "E03-F01-S02-C01" # PDF Chat endpoint prerequisite
+                  - "E03-F02-S02-C01" # Chat History endpoint prerequisite
+              - ref_id: "E01-F03-S02-C03"
+                name: "Handle token validation errors within the dependency"
+                description: "Specifically catch JWT-related exceptions (e.g., `ExpiredSignatureError`, `InvalidTokenError` from `python-jose`) within the authentication dependency and raise an appropriate `HTTPException(status_code=401, detail='...')`."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Authentication dependency base implementation
+
+  - ref_id: "E02"
+    name: "PDF Document Management"
+    description: "Enable users to upload, list, parse, and select PDF documents for interaction."
+    features:
+      - ref_id: "E02-F01"
+        name: "PDF File Type Validation and Upload"
+        description: "Allow authenticated users to upload PDF files, which are stored in MongoDB GridFS with associated metadata, ensuring only PDF files are accepted."
+        user_stories:
+          - ref_id: "E02-F01-S01"
+            persona: "user of the product"
+            i_want: "to upload a PDF file via POST /pdf-upload"
+            so_that: "I can later analyze its content, and the system only accepts valid PDF file types."
+            use_cases:
+              - ref_id: "E02-F01-S01-C01"
+                name: "Successful PDF upload with valid PDF type"
+                description: "User is authenticated and uploads a file identified as 'application/pdf' (e.g., via `file.content_type`). System stores the file in MongoDB GridFS and its metadata (user_id, original_filename, upload_date, parse_status='UNPARSED', gridfs_file_id) in the `pdf_metadata_collection`. Returns HTTP 201 Created with the new PDF's ID."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User is authenticated and can access protected routes
+                  - "E02-F01-S02-C01" # PDF Upload endpoint implemented with type validation
+                  - "E04-F01-S01-C02" # MongoDB PDF metadata schema (pdf_metadata_collection) defined
+              - ref_id: "E02-F01-S01-C02"
+                name: "Attempt to upload a non-PDF file type"
+                description: "User is authenticated and attempts to upload a file that is not 'application/pdf' (e.g., a .txt or .jpg file). System rejects the upload and returns an HTTP 415 Unsupported Media Type or HTTP 400 Bad Request with a clear message like 'Invalid file type. Only PDF files are accepted.'"
+                prerequisites:
+                  - "E01-F03-S01-C01" # User is authenticated
+                  - "E02-F01-S02-C01" # PDF Upload endpoint implemented with type validation logic
+              - ref_id: "E02-F01-S01-C03"
+                name: "Attempt to upload PDF without authentication"
+                description: "An unauthenticated request is made to the POST /pdf-upload endpoint. System returns an HTTP 401 Unauthorized error due to route protection."
+                prerequisites:
+                  - "E01-F03-S02-C02" # Generic act of Protection applied to routes
+                  - "E02-F01-S02-C01" # Specific /pdf-upload route exists and has the auth dependency applied
+          - ref_id: "E02-F01-S02"
+            persona: "developer"
+            i_want: "to implement POST /pdf-upload endpoint in the 'pdf' feature module to handle PDF file uploads, validate for 'application/pdf' content type, store binary data in MongoDB GridFS (using Pymongo async), and save associated metadata in a separate MongoDB collection"
+            so_that: "PDF files are managed according to system specifications, are linked to the authenticated user, and file type constraints are correctly enforced."
+            use_cases:
+              - ref_id: "E02-F01-S02-C01"
+                name: "Endpoint implementation for PDF file upload with content type validation"
+                description: "Implement the `/pdf-upload` route within the `pdf_router.py`. Endpoint accepts `UploadFile` (multipart/form-data). Validate `file.content_type == 'application/pdf'`. If valid, use Pymongo async client and GridFS to store `file.file` (binary stream). Create metadata document (user_id from JWT, original_filename from `file.filename`, upload_date, initial `parse_status='UNPARSED'`, and the GridFS file ID) and insert into `pdf_metadata_collection` using PDF repository. Apply JWT auth dependency (`E01-F03-S02-C01`)."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Reusable authentication dependency created
+                  - "E04-F01-S01-C02" # MongoDB PDF metadata schema (Pydantic model) defined and collection set up
+                  - "E05-F01-S01-C02" # PDF feature-specific repository interface and Mongo implementation defined (for saving metadata and interacting with GridFS)
+              - ref_id: "E02-F01-S02-C02"
+                name: "Correct storage of PDF binary data and metadata"
+                description: "Verify that the PDF binary content is correctly stored and retrievable from GridFS. Ensure all specified metadata fields (user_id, original_filename, upload_date, initial parse_status, gridfs_file_id) are accurately saved in the `pdf_metadata_collection` document associated with the GridFS file."
+                prerequisites:
+                  - "E02-F01-S02-C01" # Basic endpoint for upload implemented
+              - ref_id: "E02-F01-S02-C03"
+                name: "Error handling for PDF upload process and invalid types"
+                description: "Implement error handling for: GridFS/MongoDB storage errors (return HTTP 500), invalid `content_type` (return HTTP 415 or 400), and other potential issues during file processing. Log errors using Loguru."
+                prerequisites:
+                  - "E02-F01-S02-C01" # Basic endpoint implemented
+                  - "E04-F03-S02-C01" # Global exception handlers for unhandled cases
+                  - "E04-F02-S01-C02" # Logging mechanism for errors
+
+      - ref_id: "E02-F02"
+        name: "List User's PDFs"
+        description: "Allow authenticated users to retrieve a list of their previously uploaded PDFs."
+        user_stories:
+          - ref_id: "E02-F02-S01"
+            persona: "user of the product"
+            i_want: "to see a list of my uploaded PDFs via GET /pdf-list, with pagination"
+            so_that: "I can see their names, upload dates, and parsing status efficiently."
+            use_cases:
+              - ref_id: "E02-F02-S01-C01"
+                name: "Retrieve list of uploaded PDFs (first page)"
+                description: "User is authenticated and GETs /pdf-list (or /pdf-list?page=1&size=10). System queries MongoDB for user's PDF metadata and returns a list (e.g., PDF_id, original_filename, upload_date, parse_status) for the first page, ordered by upload_date descending."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F01-S01-C01" # At least one PDF uploaded by the user to list
+                  - "E02-F02-S02-C01" # PDF List endpoint implemented
+                  - "E02-F02-S02-C02" # Basic offset pagination for list implemented
+              - ref_id: "E02-F02-S01-C02"
+                name: "Retrieve list when no PDFs uploaded by user"
+                description: "Authenticated user has not uploaded any PDFs. System returns HTTP 200 OK with an empty list in the data field of the paginated response."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F02-S02-C01" # PDF List endpoint implemented
+
+              - ref_id: "E02-F02-S01-C03"
+                name: "Retrieve subsequent pages of PDFs using pagination parameters"
+                description: "User requests further pages (e.g. GET /pdf-list?page=2&size=10). System returns the relevant page of PDF metadata based on the pagination parameters."
+                prerequisites:
+                  - "E02-F02-S02-C02" # Pagination logic implemented in endpoint
+                  - "E02-F02-S01-C01" # Ability to get first page (to test subsequent pages)
+          - ref_id: "E02-F02-S02"
+            persona: "developer"
+            i_want: "to implement GET /pdf-list endpoint in 'pdf' module with basic offset-based pagination using Pymongo async, ensuring JWT authentication"
+            so_that: "users can retrieve their PDF metadata efficiently, and the API can handle lists of PDFs per user robustly."
+            use_cases:
+              - ref_id: "E02-F02-S02-C01"
+                name: "Endpoint implementation with user filtering, projections, and sorting"
+                description: "Implement the `/pdf-list` route. Query MongoDB `pdf_metadata_collection` filtering by the authenticated `user_id`. Use projections to fetch only necessary fields (e.g., ID, original_filename, upload_date, parse_status). Sort results by `upload_date` descending. Apply JWT auth dependency (`E01-F03-S02-C01`)."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency
+                  - "E04-F01-S01-C02" # MongoDB PDF metadata schema (with indexes on user_id and upload_date) defined
+                  - "E05-F01-S01-C02" # PDF Repository for querying metadata
+              - ref_id: "E02-F02-S02-C02"
+                name: "Implement basic offset pagination (skip/limit) in MongoDB query"
+                description: "Implement query parameters for `page` (default 1) and `size` (default 10, max e.g. 100). Calculate `skip = (page - 1) * size` and `limit = size`. Apply these to the Pymongo `find()` query using `.skip()` and `.limit()` methods, along with `.sort({ 'upload_date': -1 })`."
+                prerequisites:
+                  - "E02-F02-S02-C01" # Basic endpoint for /pdf-list to apply pagination to
+              - ref_id: "E02-F02-S02-C03"
+                name: "Structure and return paginated list data with metadata"
+                description: "The JSON response for `/pdf-list` should include: an array of PDF metadata items for the current page, and pagination metadata (e.g., `total_items`, `total_pages`, `current_page`, `page_size`). Calculating `total_items` requires an additional `count_documents` query for the user's PDFs."
+                prerequisites:
+                  - "E02-F02-S02-C02" # Pagination logic implemented
+
+      - ref_id: "E02-F03"
+        name: "Parse PDF Content (Async with Procrastinate)"
+        description: "Allow users to initiate text extraction from a selected PDF using PyPDF2 via a background task managed by Procrastinate. The parsed text and status are saved."
+        user_stories:
+          - ref_id: "E02-F03-S01"
+            persona: "user of the product"
+            i_want: "to request parsing of my PDF via POST /pdf-parse, have it processed in the background, and be able_to_track_its_status indirectly by observing the 'parse_status' field when I list my PDFs"
+            so_that: "the API responds quickly to my parse request, and I can asynchronously know when the PDF is ready for chat or if parsing encountered an issue."
+            use_cases:
+              - ref_id: "E02-F03-S01-C01"
+                name: "Successfully initiate PDF parsing for an unparsed PDF"
+                description: "User is authenticated and POSTs to /pdf-parse with a valid `pdf_id` (MongoDB ObjectID) of a PDF they own that has `parse_status='UNPARSED'`. System validates PDF ownership and status. Updates PDF `parse_status` in MongoDB to 'PARSING'. Enqueues a Procrastinate task for text extraction. Returns HTTP 202 Accepted."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F01-S01-C01" # A an unparsed PDF uploaded by user exists
+                  - "E02-F03-S02-C01" # /pdf-parse endpoint implemented
+              - ref_id: "E02-F03-S01-C02"
+                name: "Background Procrastinate task successfully parses PDF and stores text"
+                description: "The enqueued Procrastinate worker retrieves the PDF binary from GridFS, uses PyPDF2 to extract text content. Stores the extracted text (e.g., in the `parsed_pdf_texts_collection` in MongoDB, linked by `pdf_metadata_id`). Updates the `parse_status` in the corresponding `pdf_metadata_collection` document to 'PARSED_SUCCESS'."
+                prerequisites:
+                  - "E02-F03-S02-C02" # Procrastinate task for parsing implemented by developer
+                  - "E04-F01-S01-C02" # Schema for 'parsed_pdf_texts' if separate and 'pdf_metadata_collection' defined
+              - ref_id: "E02-F03-S01-C03"
+                name: "Background Procrastinate task fails to parse PDF"
+                description: "The Procrastinate worker encounters an error during parsing (e.g., PDF is corrupt, encrypted, or PyPDF2 error). It updates the `parse_status` in `pdf_metadata_collection` to 'PARSED_FAILURE' and stores a relevant error message in the `parse_error_message` field."
+                prerequisites:
+                  - "E02-F03-S02-C02" # Procrastinate task for parsing implemented with error handling
+          - ref_id: "E02-F03-S02"
+            persona: "developer"
+            i_want: "to implement POST /pdf-parse endpoint in 'pdf' module to enqueue a Procrastinate task for PDF text extraction (using PyPDF2 library) and ensure the background task asynchronously updates MongoDB with the parsing status and extracted text or error details. Apply JWT auth., so that PDF parsing is a non-blocking operation for the user, uses the specified PDF library, its state is correctly tracked in the database, and this parsing is a prerequisite for using the chat feature with a PDF."
+            use_cases:
+              - ref_id: "E02-F03-S02-C01"
+                name: "Endpoint implementation to enqueue Procrastinate task for parsing"
+                description: "Implement the `/pdf-parse` route. Accepts `pdf_id` (MongoDB ObjectID) in request body. Validate user ownership of the PDF via PDF repository. Update the PDF's metadata document in `pdf_metadata_collection` to set `parse_status='PARSING'`. Enqueue a Procrastinate job (e.g., `extract_pdf_text_task`) passing the `pdf_id`. Return HTTP 202 Accepted. Apply JWT auth dependency (`E01-F03-S02-C01`)."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency
+                  - "E02-F01-S02-C01" # PDF upload logic creates PDFs with initial UNPARSED status
+                  - "E04-F04-S01-C01" # Procrastinate worker setup in Docker/Compose environment available
+                  - "E04-F01-S01-C02" # Schema for `pdf_metadata_collection` (including `parse_status`) defined
+                  - "E05-F01-S01-C02" # PDF repository for fetching/updating PDF metadata
+              - ref_id: "E02-F03-S02-C02"
+                name: "Procrastinate task definition for PyPDF2 text extraction and result storage"
+                description: "Define the Procrastinate task function (e.g., `extract_pdf_text_task(pdf_id)`). Task logic: 1. Use PDF repository to get `gridfs_file_id` from `pdf_metadata_collection` for the `pdf_id`. 2. Retrieve PDF binary from GridFS using `gridfs_file_id`. 3. Use `PyPDF2` library to extract text from the binary. 4. On success: Store extracted text in `parsed_pdf_texts_collection` (linked by `pdf_metadata_id=pdf_id`). Update `pdf_metadata_collection.parse_status` to 'PARSED_SUCCESS' for the `pdf_id`. 5. On PyPDF2 error: Update `pdf_metadata_collection.parse_status` to 'PARSED_FAILURE' and store error details in `parse_error_message` for the `pdf_id`. Log outcomes with Loguru."
+                prerequisites:
+                  - "E02-F03-S02-C01" # Enqueueing mechanism for the task
+                  - "E04-F01-S01-C02" # Schemas for `pdf_metadata_collection` and `parsed_pdf_texts_collection` defined
+                  - "E04-F04-S01-C01" # Dockerfile configuration includes PyPDF2 dependency
+                  - "E05-F01-S01-C02" # PDF Repository for GridFS access and metadata updates
+              - ref_id: "E02-F03-S02-C03"
+                name: "Ensure accurate PDF parsing status updates in MongoDB metadata"
+                description: "Verify that the `parse_status` field in the `pdf_metadata_collection` correctly transitions (e.g., from UNPARSED by upload -> PARSING by /pdf-parse call -> PARSED_SUCCESS or PARSED_FAILURE by Procrastinate task). Also verify `parse_error_message` is populated on failure."
+                prerequisites:
+                  - "E02-F03-S02-C02" # Procrastinate task implementation completed
+
+      - ref_id: "E02-F04"
+        name: "Select PDF for Chat"
+        description: "Allow users to select a previously uploaded and parsed PDF to be the context for their chat session using a persistent server-side state (MongoDB flag)."
+        user_stories:
+          - ref_id: "E02-F04-S01"
+            persona: "user of the product"
+            i_want: "to select a specific PDF that I have uploaded and has been successfully parsed, via POST /pdf-select"
+            so_that: "my subsequent chat messages are understood by the system to be in the context of that selected document."
+            use_cases:
+              - ref_id: "E02-F04-S01-C01"
+                name: "Successfully select a parsed PDF for chat"
+                description: "User is authenticated and POSTs to /pdf-select with a valid `pdf_id` (MongoDB ObjectID) of a PDF they own, which has `parse_status == 'PARSED_SUCCESS'`. System updates the `is_selected_for_chat` flag to `true` for this PDF's metadata document in MongoDB (and ensures it's `false` for all other PDFs of the same user). Returns HTTP 200 OK."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F03-S01-C02" # At least one PDF successfully parsed by the user
+                  - "E02-F04-S02-C01" # /pdf-select endpoint implemented
+              - ref_id: "E02-F04-S01-C02"
+                name: "Attempt to select a PDF that is not yet parsed or parsing failed"
+                description: "User attempts to POST to /pdf-select with a `pdf_id` for a PDF where `parse_status` is 'UNPARSED', 'PARSING', or 'PARSED_FAILURE'. System returns HTTP 409 Conflict or HTTP 400 Bad Request with a message like 'PDF is not yet parsed successfully.'"
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F04-S02-C01" # /pdf-select endpoint implemented
+                  - "E02-F01-S01-C01" # PDF exists in an UNPARSED state (to test this scenario)
+                  - "E02-F03-S01-C03" # PDF exists in a PARSED_FAILURE state (to test this scenario)
+              - ref_id: "E02-F04-S01-C03"
+                name: "Attempt to select a non-existent or unauthorized PDF for chat"
+                description: "User attempts to POST to /pdf-select with a `pdf_id` that does not exist or belongs to another user. System returns HTTP 404 Not Found or HTTP 403 Forbidden."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F04-S02-C01" # /pdf-select endpoint implemented
+          - ref_id: "E02-F04-S02"
+            persona: "developer"
+            i_want: "to implement POST /pdf-select endpoint in 'pdf' module that takes a `pdf_id`, verifies it belongs to the authenticated user and has `parse_status == 'PARSED_SUCCESS'`, then updates a flag in MongoDB PDF metadata to mark it as the active document context for the user's chat session. Apply JWT auth., so that chat interactions can be correctly contextualized to the selected document, fulfilling the requirement that the PDF must be parsed before chat."
+            use_cases:
+              - ref_id: "E02-F04-S02-C01"
+                name: "Endpoint implementation for /pdf-select with PDF validation"
+                description: "Implement the `/pdf-select` route. Accepts `pdf_id` (MongoDB ObjectID) in request body. Use PDF repository to fetch the PDF metadata from `pdf_metadata_collection`. Verify the `pdf_id` exists, belongs to the authenticated `user_id`, and its `parse_status` is 'PARSED_SUCCESS'. Apply JWT auth dependency (`E01-F03-S02-C01`)."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency
+                  - "E02-F03-S02-C03" # PDF parsing status update logic in MongoDB is working reliably
+                  - "E04-F01-S01-C02" # Schema for `pdf_metadata_collection` (including `parse_status` and `is_selected_for_chat`) defined
+                  - "E05-F01-S01-C02" # PDF Repository for fetching/updating metadata
+              - ref_id: "E02-F04-S02-C02"
+                name: "Atomically set active PDF context using MongoDB `is_selected_for_chat` flag"
+                description: "Upon successful validation in /pdf-select: 1. Perform a MongoDB update operation on `pdf_metadata_collection` to set `is_selected_for_chat: false` for all documents where `user_id` matches the authenticated user. 2. Perform another MongoDB update operation to set `is_selected_for_chat: true` for the document matching the target `pdf_id` and authenticated `user_id`. These should be done carefully to ensure data consistency."
+                prerequisites:
+                  - "E02-F04-S02-C01" # Basic endpoint with validation logic implemented
+              - ref_id: "E02-F04-S02-C03"
+                name: "Error handling for PDF selection process"
+                description: "Implement error handling for cases where: PDF not found (HTTP 404), PDF not owned by user (HTTP 403), PDF not successfully parsed (HTTP 409/400). Log errors using Loguru."
+                prerequisites:
+                  - "E02-F04-S02-C01" # Basic endpoint implemented
+                  - "E04-F03-S02-C01" # Global exception handlers
+                  - "E04-F02-S01-C02" # Logging mechanism for errors
+
+  - ref_id: "E03"
+    name: "LLM-Powered Document Chat"
+    description: "Enable users to engage in conversations about their selected PDF documents using an LLM integration."
+    features:
+      - ref_id: "E03-F01"
+        name: "Chat with Selected PDF using Gemini Pro (Async LLM Call)"
+        description: "Allow users to send messages related to their selected (and parsed) PDF, receive responses from Gemini LLM (via Procrastinate background task), with chat history logged in PostgreSQL. Each question is treated independently with full PDF text context. Chat messages are linked to PDF filename for context."
+        user_stories:
+          - ref_id: "E03-F01-S01"
+            persona: "user of the product"
+            i_want: "to send a question via POST /pdf-chat, have the LLM process it with document context in background, and see the response in my chat history"
+            so_that: "I can get answers from the LLM without blocking, and all interactions are recorded with PDF context."
+            use_cases:
+              - ref_id: "E03-F01-S01-C01"
+                name: "Successfully initiate chat interaction"
+                description: "User is authenticated and POSTs to /pdf-chat with a message. System identifies user's currently selected PDF (by querying MongoDB for `is_selected_for_chat: true` for the user's ID). If a valid parsed PDF is selected, saves user message and LLM placeholder (status PENDING) in PostgreSQL `chat_logs` (with `user_id`, `pdf_document_id`, `pdf_original_filename` - fetched from MongoDB). Enqueues a Procrastinate task for the LLM call, passing necessary data (e.g., ID of the pending chat log entry). Returns HTTP 202 Accepted."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E02-F04-S01-C01" # User has successfully selected a parsed PDF
+                  - "E03-F01-S02-C01" # /pdf-chat endpoint implemented
+                  - "E04-F01-S01-C01" # PostgreSQL chat_logs schema defined (with pdf_original_filename)
+              - ref_id: "E03-F01-S01-C02"
+                name: "Background Procrastinate task successfully gets LLM response and updates history"
+                description: "The enqueued Procrastinate worker retrieves the user message details (e.g., from chat_logs), fetches the selected PDF's parsed text (from MongoDB `parsed_pdf_texts_collection`). Calls Gemini API (using API key from env). On success, updates the corresponding LLM placeholder entry in `chat_logs` with the response text and sets `llm_status` to 'COMPLETED_SUCCESS'."
+                prerequisites:
+                  - "E03-F01-S02-C02" # Procrastinate task for LLM call implemented
+                  - "E02-F03-S01-C02" # Parsed PDF text for the selected PDF is available
+              - ref_id: "E03-F01-S01-C03"
+                name: "Background Procrastinate task handles LLM API errors, retries, and final failure"
+                description: "If the Gemini API call fails (network issue, API error, etc.), the Procrastinate worker attempts a configured number of retries (e.g., from `LLM_RETRY_ATTEMPTS` env var). If all retries fail, it updates the LLM message entry in `chat_logs` with `llm_status='FAILED_RETRIES_EXHAUSTED'` and logs the error details using Loguru."
+                prerequisites:
+                  - "E03-F01-S02-C02" # Procrastinate task implemented with error/retry logic
+                  - "E03-F01-S03-C02" # Env var for retry attempts defined
+                  - "E04-F02-S01-C02" # Logging mechanism for errors
+          - ref_id: "E03-F01-S02"
+            persona: "developer"
+            i_want: "to implement POST /pdf-chat endpoint in 'chat' module to enqueue a Procrastinate task for the Gemini API call, manage retries, and log the full interaction (user question & LLM answer linked to PDF ID and filename) in PostgreSQL. Use async operations., so that users can initiate chat non-blockingly, LLM calls are resilient to transient errors, history is accurately logged with document context, and the correct context (parsed PDF text + current question) is provided to the LLM."
+            use_cases:
+              - ref_id: "E03-F01-S02-C01"
+                name: "Endpoint implementation for chat initiation (async with Procrastinate)"
+                description: "Implement the `/pdf-chat` route. Accepts user `message` (Pydantic model). Identify the authenticated user and their currently selected PDF (query MongoDB `pdf_metadata_collection` for `is_selected_for_chat=true` for `user_id`). If no selected PDF or not parsed, return HTTP 400/409. Store the user message and a placeholder LLM message (`llm_status='PENDING'`) in PostgreSQL `chat_logs` table via Chat repository (linking `user_id`, `pdf_document_id`, `pdf_original_filename`). Enqueue a Procrastinate job (e.g., `generate_llm_response_task`), passing necessary data (e.g., ID of the pending chat log entry or user_id, pdf_id, user_message_content). Return HTTP 202 Accepted."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency
+                  - "E02-F04-S02-C02" # Logic to get selected PDF and its filename from MongoDB
+                  - "E04-F01-S01-C01" # `chat_logs` schema defined (to include pdf_original_filename, status)
+                  - "E05-F01-S01-C02" # Chat Repository for saving/updating logs; PDF Repository for checking selected PDF
+                  - "E04-F04-S01-C01" # Procrastinate worker setup in Docker/Compose environment available
+              - ref_id: "E03-F01-S02-C02"
+                name: "Procrastinate task definition for Gemini API call, context retrieval, & retries"
+                description: "Define the Procrastinate task function (e.g., `generate_llm_response_task(chat_log_id)`). Task logic: 1. Retrieve the chat log entry details (e.g., user question, pdf_id) from `chat_logs` using `chat_log_id`. 2. Fetch the parsed PDF text from MongoDB `parsed_pdf_texts_collection` using the `pdf_id`. 3. Call the Gemini API (using API key from env var `GEMINI_API_KEY`) with the prompt constructed from the retrieved parsed PDF text and the user question. Implement retry logic (`LLM_RETRY_ATTEMPTS` from env) for API calls. 4. On successful response: Update the `chat_logs` entry (`chat_log_id`) with the LLM's response content and set `llm_status` to 'COMPLETED_SUCCESS'. 5. On final failure after retries: Update the `chat_logs` entry with `llm_status='FAILED_RETRIES_EXHAUSTED'`. Log outcomes and errors using Loguru."
+                prerequisites:
+                  - "E03-F01-S02-C01" # Enqueueing mechanism for this task is implemented
+                  - "E02-F03-S02-C02" # Parsed PDF text storage and retrieval logic in MongoDB is working
+                  - "E03-F01-S03-C01" # Environment variable for Gemini API key is defined
+                  - "E03-F01-S03-C02" # Environment variable for LLM retry attempts is defined
+                  - "E04-F04-S01-C01" # Dockerfile configuration includes Gemini SDK dependency
+                  - "E05-F01-S01-C02" # Chat Repository for updating logs; PDF Repository for getting parsed text
+              - ref_id: "E03-F01-S02-C03"
+                name: "Ensure robust asynchronous update of chat_logs for LLM messages"
+                description: "Verify that the Procrastinate task reliably updates the correct LLM message placeholder row in `chat_logs` using the provided ID, setting the correct `llm_status` ('COMPLETED_SUCCESS' or 'FAILED_RETRIES_EXHAUSTED') and storing the response content or error indication."
+                prerequisites:
+                  - "E03-F01-S02-C02" # Procrastinate task implementation completed
+
+          - ref_id: "E03-F01-S03"
+            persona: "devops engineer/sre"
+            i_want: "the Gemini API key and LLM retry count to be easily configurable via environment variables in the deployed environment"
+            so_that: "sensitive keys are not hardcoded in the application, and operational parameters for the LLM worker can be tuned without code changes or redeployment."
+            use_cases:
+              - ref_id: "E03-F01-S03-C01"
+                name: "Define and document Environment variable for Gemini API Key"
+                description: "Ensure application code reads the Gemini API key from a specific environment variable (`GEMINI_API_KEY`). Document this variable's name and purpose in the README.md (Environment Variables section)."
+                prerequisites:
+                  - "E04-F05-S01-C03" # README section for env vars exists
+              - ref_id: "E03-F01-S03-C02"
+                name: "Define and document Environment variable for LLM retry attempts"
+                description: "Ensure application code (specifically the Procrastinate task logic) reads the number of LLM retry attempts from an environment variable (`LLM_RETRY_ATTEMPTS`), providing a default value if not set. Document this variable in the README.md."
+                prerequisites:
+                  - "E04-F05-S01-C03" # README section for env vars exists
+              - ref_id: "E03-F01-S03-C03"
+                name: "Handle missing/invalid API key gracefully within the Procrastinate worker task"
+                description: "Implement checks within the `generate_llm_response_task` to ensure the `GEMINI_API_KEY` is available and seems valid before attempting the API call. If missing or invalid, log an error, mark the chat log entry as 'FAILED_RETRIES_EXHAUSTED' immediately without retries, and prevent the worker from crashing."
+                prerequisites:
+                  - "E03-F01-S02-C02" # Procrastinate task implementation completed
+                  - "E03-F01-S03-C01" # Env var for key is defined
+                  - "E04-F02-S01-C02" # Logging mechanism for errors
+
+      - ref_id: "E03-F02"
+        name: "Retrieve Chat History"
+        description: "Allow users to retrieve their full conversation history from PostgreSQL, showing context (e.g., PDF filename), with basic pagination."
+        user_stories:
+          - ref_id: "E03-F02-S01"
+            persona: "user of the product"
+            i_want: "to retrieve my full conversation history via GET /chat-history, with information identifying which PDF each part of the conversation refers to, and with pagination"
+            so_that: "I can review all past interactions with the LLM across my documents efficiently and understand their context."
+            use_cases:
+              - ref_id: "E03-F02-S01-C01"
+                name: "Retrieve chat history with PDF context (first page)"
+                description: "User is authenticated and GETs /chat-history (or /chat-history?page=1&size=20). System queries PostgreSQL `chat_logs` table for the user's ID. Response includes user message, LLM response (content and status), timestamp, `pdf_document_id`, and the denormalized `pdf_original_filename` for each log entry. Returns the first page of results, ordered chronologically (most recent first)."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E03-F01-S01-C01" # Some chat interactions must exist in the database to be retrieved
+                  - "E03-F02-S02-C01" # Chat history endpoint implemented
+                  - "E03-F02-S02-C02" # Basic offset pagination for history implemented
+              - ref_id: "E03-F02-S01-C02"
+                name: "Retrieve chat history when no logs exist for the user"
+                description: "Authenticated user has no prior chat interactions recorded in the `chat_logs` table. System returns HTTP 200 OK with an empty list in the data field of the paginated response."
+                prerequisites:
+                  - "E01-F03-S01-C01" # User authenticated
+                  - "E03-F02-S02-C01" # Chat history endpoint implemented
+
+              - ref_id: "E03-F02-S01-C03"
+                name: "Retrieve subsequent pages of chat history using pagination parameters"
+                description: "User requests further pages (e.g. GET /chat-history?page=2&size=20). System returns the relevant page of chat logs based on the pagination parameters, maintaining chronological order and including PDF context."
+                prerequisites:
+                  - "E03-F02-S02-C02" # Pagination logic implemented in endpoint
+                  - "E03-F02-S01-C01" # Ability to get the first page (to test subsequent pages)
+          - ref_id: "E03-F02-S02"
+            persona: "developer"
+            i_want: "to implement GET /chat-history endpoint in 'chat' module with basic offset-based pagination, retrieving logs from PostgreSQL (SQLAlchemy async) and including PDF context (denormalized filename). Apply JWT auth., so that users can review their entire conversation history meaningfully, and the API handles potentially large histories performantly using necessary indexes."
+            use_cases:
+              - ref_id: "E03-F02-S02-C01"
+                name: "Endpoint implementation with user filtering for chat history"
+                description: "Implement the `/chat-history` route. Query `chat_logs` table filtering by the authenticated `user_id` using SQLAlchemy async session and Chat repository. Apply JWT auth dependency (`E01-F03-S02-C01`)."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency
+                  - "E04-F01-S01-C01" # `chat_logs` schema defined (including `pdf_original_filename` and the performance-critical index `idx_chat_logs_user_timestamp_id`)
+                  - "E05-F01-S01-C02" # Chat Repository for querying logs
+              - ref_id: "E03-F02-S02-C02"
+                name: "Implement basic offset pagination for chat history"
+                description: "Implement query parameters for `page` (default 1) and `size` (default 20, configurable max). Calculate `skip = (page - 1) * size` and `limit = size`. Apply these to the SQLAlchemy query using `.offset()` and `.limit()` methods. Ensure results are ordered by `timestamp` descending and `id` descending using `.order_by(chat_logs.c.timestamp.desc(), chat_logs.c.id.desc())` for consistent pagination."
+                prerequisites:
+                  - "E03-F02-S02-C01" # Basic endpoint implemented
+              - ref_id: "E03-F02-S02-C03"
+                name: "Structure and return paginated chat history data with PDF context"
+                description: "The JSON response for `/chat-history` should include: an array of chat log items for the current page (each item containing user message, LLM response content & status, timestamp, `pdf_document_id`, and the denormalized `pdf_original_filename` field from `chat_logs`), and pagination metadata (`total_items`, `total_pages`, `current_page`, `page_size`). Calculating `total_items` requires a `count()` query for the user's chat logs."
+                prerequisites:
+                  - "E03-F02-S02-C02" # Pagination logic implemented
+                  - "E03-F01-S02-C01" # Logic to store `pdf_document_id` and `pdf_original_filename` in `chat_logs` when messages are created
+
+  - ref_id: "E04"
+    name: "System Foundation & Operations"
+    description: "Establish robust data modeling, logging, error handling, containerization, and documentation for the application."
+    features:
+      - ref_id: "E04-F01"
+        name: "Data Model and Schema Design (SQLAlchemy & Pydantic/Mongo)"
+        description: "Define and implement database schemas for PostgreSQL (users, chat_logs using SQLAlchemy async) and MongoDB (PDF metadata & parsed text with Pymongo async & Pydantic models), including performance-critical indexes."
+        user_stories:
+          - ref_id: "E04-F01-S01"
+            persona: "developer"
+            i_want: "to design and implement robust, async-compatible database schemas using SQLAlchemy for PostgreSQL and Pydantic models for MongoDB structure, including necessary indexes for multi-tenant performance"
+            so_that: "data is stored efficiently, consistently, relations are managed, all required application queries are supported, and async I/O is utilized."
+            use_cases:
+              - ref_id: "E04-F01-S01-C01"
+                name: "Define PostgreSQL schemas (SQLAlchemy async models) with indexes"
+                description: "Create SQLAlchemy models (async-compatible) for `users` (id, email, hashed_password, created_at) and `chat_logs` (id, user_id_fk, pdf_document_id (TEXT), pdf_original_filename (TEXT), user_message_content, llm_response_content, llm_status, timestamp, retry_attempts). Use `alembic` (preferred for migrations) or `Base.metadata.create_all` for initial schema creation. Define a composite index on `chat_logs (user_id, timestamp DESC, id DESC)` for chat history pagination performance. Define a unique index on `users(email)` for registration checks. Foreign key constraints (`user_id_fk` references `users.id`)."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Project structure defined (where models will live)
+              - ref_id: "E04-F01-S01-C02"
+                name: "Define MongoDB schemas (Pydantic models for validation) with indexes"
+                description: "Define Pydantic models for: 1. `pdf_metadata_collection` (e.g., _id: ObjectId, user_id: int, gridfs_file_id: ObjectId, original_filename: str, upload_date: datetime, parse_status: Enum, parse_error_message: Optional[str], is_selected_for_chat: bool). 2. `parsed_pdf_texts_collection` (e.g., _id: ObjectId, pdf_metadata_id: ObjectId, text_content: str). Use Pymongo with Pydantic models for validation and interaction. Define MongoDB indexes on `pdf_metadata_collection(user_id, upload_date)` for listing, `pdf_metadata_collection(user_id, is_selected_for_chat)` for selection lookup, and `parsed_pdf_texts_collection(pdf_metadata_id)` for retrieving text."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Project structure defined (where models will live)
+              - ref_id: "E04-F01-S01-C03"
+                name: "Map domain models to storage representations and implement repositories"
+                description: "Map domain concepts (e.g., `User` aggregate, `PDFDocument` aggregate, `ChatMessageTurn` entity) to their respective database representations (SQLAlchemy models, MongoDB documents). Implement the defined repository interfaces (`E05-F01-S01-C02`) with concrete async implementations (`SQLAlchemyUserRepository`, `MongoPDFRepository`, `SQLAlchemyChatRepository`) within an infrastructure sub-layer of each feature (e.g., `app/account/infrastructure/`). These implementations should use SQLAlchemy async for PG and Pymongo async for Mongo as defined in E04-F01."
+                prerequisites:
+                  - "E04-F01-S01-C01" # PG Schemas defined
+                  - "E04-F01-S01-C02" # Mongo Schemas defined
+                  - "E05-F01-S01-C02" # Repository pattern interfaces defined
+
+      - ref_id: "E04-F02"
+        name: "Structured Logging (Loguru)"
+        description: "Implement structured logging using Loguru for application events, requests, and errors as per requirements."
+        user_stories:
+          - ref_id: "E04-F02-S01"
+            persona: "developer"
+            i_want: "to integrate Loguru for consistent, structured (e.g., JSON) logging across the application for all actions, events, and errors, compatible with async context"
+            so_that: "'all actions logged appropriately' objective is met, facilitating debugging and monitoring."
+            use_cases:
+              - ref_id: "E04-F02-S01-C01"
+                name: "Configure Loguru for structured JSON output to stdout/stderr"
+                description: "Set up Loguru globally (e.g., in `app/core/logging.py` or `app/main.py`) to output JSON logs. Include standard fields (timestamp, level, message). Configure context handlers (e.g., Loguru's `bind` or `patcher`) to dynamically add contextual data (request_id from middleware, user_id from auth dependency, feature/module name) to log records. Ensure it integrates smoothly with FastAPI's async nature and Procrastinate workers."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Basic project structure (where config/logging module will live)
+                  - "E04-F03-S02-C01" # FastAPI app setup (to integrate middleware/dependencies for context)
+                  - "E04-F04-S01-C01" # Dockerfile setup (to confirm stdout/stderr output works in container)
+              - ref_id: "E04-F02-S01-C02"
+                name: "Add Loguru logging statements for key application actions, errors, and Procrastinate tasks"
+                description: "Sprinkle Loguru logging calls (info, warning, error, debug as appropriate) throughout the application code: when users register/login, when PDF actions occur (/upload, /parse request, /select), when chat is initiated, when Procrastinate tasks execute (start, success, failure with details), when LLM API calls are made (request summary, response, errors). Ensure all caught exceptions are logged with enough detail (e.g., stack traces at debug/error levels)."
+                prerequisites: 
+                  - "E04-F02-S01-C01" # Loguru configured and available
+                  # Logging is added incrementally as features and their Dev use cases are implemented.
+                  # E.g., E01-F01-S02-C01, E02-F01-S02-C01, E03-F01-S02-C01 are places where logging calls should be added.
+              - ref_id: "E04-F02-S01-C03"
+                name: "Ensure logs include user context (user_id) for user-initiated actions"
+                description: "Modify the authentication dependency (`E01-F03-S02-C01`) or request middleware to bind the authenticated `user_id` to Loguru's context for the duration of the request, so it's automatically included in all log messages generated during that request."
+                prerequisites:
+                  - "E01-F03-S02-C01" # Auth dependency providing user context is implemented
+                  - "E04-F02-S01-C01" # Loguru context mechanism is configured
+          - ref_id: "E04-F02-S02"
+            persona: "product owner"
+            i_want: "key user actions, system events, and errors to be logged sufficiently with context, as per the 'all actions logged appropriately' objective"
+            so_that: "we have a traceable record for debugging, can understand system behavior, and meet any potential compliance needs for logging."
+            use_cases:
+              - ref_id: "E04-F02-S02-C01"
+                name: "Verify logging of critical path actions with user context"
+                description: "Review sample log output to confirm that critical user-initiated actions (registration, login, PDF upload/parse/select, chat message submission) are consistently logged with the associated `user_id` and relevant entity IDs (e.g., `pdf_id`). Check that Loguru's structured format is being used."
+                prerequisites:
+                  - "E04-F02-S01-C03" # Dev implementation of contextual logging
+                  - "E04-F02-S01-C02" # Dev implementation of logging calls in features
+              - ref_id: "E04-F02-S02-C02"
+                name: "Ensure error logging is comprehensive and structured for diagnosis"
+                description: "Review logs generated during error scenarios (invalid input, auth failures, database errors, LLM API failures, Procrastinate task failures) to verify that they are logged with appropriate severity levels (WARNING, ERROR, DEBUG) and include enough detail (error message, relevant data, potentially stack trace) in the structured format for developers/SREs to diagnose issues."
+                prerequisites:
+                  - "E04-F02-S01-C02" # Dev implementation of error logging across features
+                  - "E04-F03-S02-C03" # Dev implementation of error handling logging
+              - ref_id: "E04-F02-S02-C03"
+                name: "Review Loguru JSON output structure for utility"
+                description: "Assess the JSON structure of sample log output to ensure it contains expected fields (timestamp, level, message, user_id, request_id, etc.) and is suitable for potential future ingestion into log aggregation and analysis tools."
+                prerequisites:
+                  - "E04-F02-S01-C01" # Loguru configured for structured output
+
+      - ref_id: "E04-F03"
+        name: "Graceful API Error Handling"
+        description: "Ensure the API handles exceptions gracefully, returning clear messages and proper HTTP status codes."
+        user_stories:
+          - ref_id: "E04-F03-S01"
+            persona: "user of the product"
+            i_want: "to receive clear error messages and appropriate HTTP status codes when an API error occurs due to my request or a server issue"
+            so_that: "I can understand what went wrong and potentially how to correct my request or report the issue effectively."
+            use_cases:
+              - ref_id: "E04-F03-S01-C01"
+                name: "Receive appropriate 4xx status and clear message for client-side errors"
+                description: "When the user's request is invalid (e.g., missing field, wrong data type - triggering Pydantic validation error), unauthorized (missing/invalid JWT), forbidden (attempting action on unowned resource), not found (requesting non-existent PDF), or conflicts with current state (e.g., selecting unparsed PDF), the API returns an appropriate HTTP 4xx status code (400, 401, 403, 404, 409, 422) with a JSON response body containing a clear, user-friendly error message."
+                prerequisites:
+                  - "E04-F03-S02-C01" # Exception Handlers implemented
+                  # Specific 4xx scenarios depend on the feature endpoint being implemented, e.g.
+                  # E01-F01-S01-C03 (Invalid registration input) -> 400/422
+                  # E01-F03-S01-C02 (Invalid token) -> 401
+                  # E02-F04-S01-C03 (Select unowned PDF) -> 403
+                  # E02-F04-S01-C02 (Select unparsed PDF) -> 409
+              - ref_id: "E04-F03-S01-C02"
+                name: "Receive a generic 5xx status and message for server-side errors"
+                description: "When an unexpected error occurs on the server (e.g., database connection failure, unhandled exception in LLM call, unhandled bug), the API returns an HTTP 5xx status code (typically 500 Internal Server Error, potentially 502 Bad Gateway or 503 Service Unavailable for external service issues) with a generic JSON error message. The response should NOT expose internal stack traces, specific database errors, or other sensitive details to the client."
+                prerequisites:
+                  - "E04-F03-S02-C01" # Exception Handlers implemented
+              - ref_id: "E04-F03-S01-C03"
+                name: "All API error responses follow a consistent JSON structure"
+                description: "Regardless of the error type (4xx or 5xx), the JSON response body for errors adheres to a standard format (e.g., a Pydantic model like `{'detail': 'Error description'}` or a more structured object with `code` and `message` fields)."
+                prerequisites:
+                  - "E04-F03-S02-C02" # Pydantic error model defined
+                  - "E04-F03-S02-C01" # Exception Handlers use the defined model
+
+          - ref_id: "E04-F03-S02"
+            persona: "developer"
+            i_want: "to implement global and specific exception handlers in FastAPI using Pydantic models for error responses"
+            so_that: "all known and unexpected errors are caught, logged appropriately via Loguru, and transformed into standardized, user-friendly JSON error responses with correct HTTP status codes."
+            use_cases:
+              - ref_id: "E04-F03-S02-C01"
+                name: "Implement FastAPI exception handlers for broad error categories"
+                description: "Use FastAPI's `@app.exception_handler` decorator or middleware to catch: custom domain-specific exceptions (e.g., `UserNotFound`, `PDFNotParsed`, `PDFNotOwned` defined within feature modules), Pydantic `ValidationError` (which FastAPI handles by default as 422, but can be customized), FastAPI's built-in `HTTPException`, and a generic handler for the base `Exception` class to catch any unhandled errors."
+                prerequisites: 
+                  - "E05-F01-S01-C01" # Base FastAPI app (`app/main.py`) setup
+                  - "E04-F02-S01-C01" # Loguru setup for logging errors
+                  # Domain exceptions (like PDFNotParsed) are prerequisites as they are defined within feature dev use cases.
+              - ref_id: "E04-F03-S02-C02"
+                name: "Define Pydantic model for standard API error responses"
+                description: "Create a Pydantic model (e.g., in `app/lib/schemas.py`) for a consistent JSON error response structure. This model should be used by all exception handlers to ensure uniform error messages."
+                prerequisites: ["E04-F03-S02-C01"] # Handlers exist to use the model
+              - ref_id: "E04-F03-S02-C03"
+                name: "Map specific exceptions to appropriate HTTP status codes and log errors"
+                description: "Within the exception handlers, ensure that specific backend exceptions (e.g., from domain logic or repositories) and external service errors (e.g., LLM API issues leading to failures) are mapped to semantically correct 4xx or 5xx HTTP status codes. Log detailed error information (including stack traces for 5xx errors at appropriate levels like DEBUG or ERROR) using Loguru before returning the potentially simplified message to the client."
+                prerequisites: 
+                  - "E04-F03-S02-C01" # Handlers in place
+                  - "E04-F02-S01-C02" # Logging mechanism for errors is available
+
+      - ref_id: "E04-F04"
+        name: "Application Containerization with Docker (uv & Ruff)"
+        description: "Package the application using Docker, uv for package management, and Ruff for linting/formatting, as per specified tech stack. Includes Procrastinate worker."
+        user_stories:
+          - ref_id: "E04-F04-S01"
+            persona: "developer"
+            i_want: "to create an efficient Dockerfile (using `uv`) for the FastAPI application and the Procrastinate worker, and a `docker-compose.yml` file for setting up the local development stack (App, Worker, PostgreSQL, MongoDB services)"
+            so_that: "the application (leveraging `uv` and `ruff` for development standards) can be built into portable Docker images and run consistently across different environments, meeting the project deliverables for containerization and local setup."
+            use_cases:
+              - ref_id: "E04-F04-S01-C01"
+                name: "Write optimized Dockerfile for App & Worker (using multi-stage build with `uv`)"
+                description: "Create a multi-stage Dockerfile. Stage 1 (builder): Use a suitable base image (e.g., python:3.x-slim-bookworm). Install `uv`. Copy `requirements.txt` (or potentially `pyproject.toml` if using `uv lock`). Run `uv pip install --system --no-cache -r requirements.txt` to install dependencies into a venv. Stage 2 (runtime): Use a minimal base image (e.g., python:3.x-slim-bookworm). Copy the venv from the builder stage. Copy application code. Set up a non-root user. Define the `ENTRYPOINT` or `CMD` for running the FastAPI app using `uvicorn` (e.g., `uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop uvloop`). Define a separate `CMD` or `ENTRYPOINT` for the Procrastinate worker (e.g., `procrastinate --app=app.core.procrastinate_app_instance worker -vv` - assuming Procrastinate app instance is defined in `app.core`). Ruff should be configured and used for linting locally before commits (`E05-F02-S01-C01`)."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Project structure is established
+                  - "E05-F02-S01-C01" # Ruff setup is planned/done
+                  # Procrastinate app instance and tasks need to be defined in code.
+                  # Requirements.txt or pyproject.toml must be complete with all dependencies (SQLAlchemy[asyncpg], Pymongo[srv,pydantic], PyPDF2, Gemini SDK, Procrastinate, Loguru, Passlib, python-jose[cryptography])
+              - ref_id: "E04-F04-S01-C02"
+                name: "Develop docker-compose.yml for local development stack orchestration"
+                description: "Create a `docker-compose.yml` file in the project root. Define multiple services: 1. `app` service (builds from Dockerfile `E04-F04-S01-C01`, exposes port e.g. 8000, sets environment variables including `DB_URL_POSTGRES`, `DB_URL_MONGO`, `JWT_SECRET_KEY`, `GEMINI_API_KEY`). 2. `worker` service (builds from same Dockerfile but overrides command to run Procrastinate worker, sets necessary environment variables like `DB_URL_POSTGRES` for Procrastinate, `GEMINI_API_KEY`, `LLM_RETRY_ATTEMPTS`). 3. `postgres` service (uses an official PostgreSQL image, configures user/password/database via environment variables, defines a volume for persistent data). 4. `mongo` service (uses an official MongoDB image, defines a volume for persistent data). Define a Docker network for services to communicate."
+                prerequisites:
+                  - "E04-F04-S01-C01" # Dockerfile for app and worker is ready
+                  - "E04-F01-S01-C01" # PostgreSQL schema defined (needed for Procrastinate tables too)
+                  - "E04-F01-S01-C02" # MongoDB schemas defined
+                  - "E04-F05-S01-C03" # All necessary environment variables are identified and documented
+              - ref_id: "E04-F04-S01-C03"
+                name: "Verify build and run via Docker/Compose and test inter-service communication"
+                description: "Ensure `docker build` works. `docker-compose up --build` starts all services. Verify all services start without errors. Test connections: App container can connect to Postgres and Mongo using service names (e.g., `postgres:5432`). Procrastinate worker can connect to Postgres. Test the core application flows (register, login, upload, parse, select, chat) by making API calls to the FastAPI app container (e.g., `localhost:8000` if port is mapped), ensuring background tasks triggered via Procrastinate are processed by the worker."
+                prerequisites:
+                  - "E04-F04-S01-C02" # docker-compose.yml file is written and runnable
+                  # All core features (upload, parse enqueueing, chat enqueueing) must be implemented to test full flow.
+                  - "E02-F03-S02-C01" # PDF Parse enqueueing implemented
+                  - "E03-F01-S02-C01" # Chat enqueueing implemented
+          - ref_id: "E04-F04-S02"
+            persona: "devops engineer/sre"
+            i_want: "a working Dockerfile (using `uv`) and `docker-compose.yml` in the project root directory for the application and the Procrastinate worker"
+            so_that: "the application stack can be easily built, deployed, and managed in various environments, meeting the key deliverable requirement that the project runs as expected when cloned and built via Docker."
+            use_cases:
+              - ref_id: "E04-F04-S02-C01"
+                name: "Review Dockerfile for `uv` usage, worker setup, and best practices"
+                description: "Examine the Dockerfile to ensure `uv` is used correctly for dependency installation, the setup allows for both the main FastAPI app and the Procrastinate worker to run from the same image but with different entrypoints/commands, and general Docker best practices are followed (e.g., multi-stage, non-root user, minimal image size)."
+                prerequisites: ["E04-F04-S01-C01"] # Dockerfile is implemented
+              - ref_id: "E04-F04-S02-C02"
+                name: "Validate `docker-compose.yml` for reproducibility and inter-service connectivity"
+                description: "Verify that `docker-compose up` successfully starts all defined services (app, worker, postgres, mongo). Confirm that the application and worker containers can communicate with the database containers using their service names (e.g., `postgres`, `mongo`). Ensure data volumes are correctly configured for database persistence across container restarts (for local development)."
+                prerequisites: ["E04-F04-S01-C02"] # docker-compose.yml is implemented
+              - ref_id: "E04-F04-S02-C03"
+                name: "Ensure container configuration is fully parameterized via environment variables"
+                description: "Confirm that all necessary configurations (database connection strings for both app and Procrastinate, API keys, JWT secret, LLM retry count, Procrastinate app path for the worker) are read from environment variables within the containers and that these variables are clearly defined and passed in the `docker-compose.yml` file, matching the documentation in the README."
+                prerequisites: 
+                  - "E04-F04-S01-C02" # docker-compose.yml is implemented
+                  - "E04-F05-S01-C03" # README documents all environment variables
+
+      - ref_id: "E04-F05"
+        name: "Comprehensive README Documentation"
+        description: "Provide a well-structured README.md file covering setup, usage, common errors, and other essential project information as per deliverables."
+        user_stories:
+          - ref_id: "E04-F05-S01"
+            persona: "developer"
+            i_want: "to create a comprehensive README.md file as specified by the deliverables, including sections for setup details (mentioning `uv`), how to run using Docker (covering both the app and the Procrastinate worker), API usage examples, a list of environment variables, explanations of common errors, known issues, and optionally, improvement ideas, so that the project is well-documented, meeting all documentation deliverables and enabling others (or myself later) to easily understand, set up, run, configure, and use the project."
+            use_cases:
+              - ref_id: "E04-F05-S01-C01"
+                name: "Document setup, installation (`uv`), and running the application and worker with Docker/docker-compose"
+                description: "Write clear instructions in README.md covering: Prerequisites (Docker, Docker Compose). How to clone the repository. How to set up environment variables (e.g., providing an example `.env` file structure). How to build the Docker image (mentioning `uv` if it's part of the build command/process). How to run the entire stack using `docker-compose up` (explaining that this starts the app, worker, and databases). How to run Procrastinate migrations if they are needed for the job queue setup."
+                prerequisites: ["E04-F04-S01-C02"] # docker-compose.yml setup is finalized
+              - ref_id: "E04-F05-S01-C02"
+                name: "Provide API usage examples using `curl` or Postman collection"
+                description: "Include practical examples of API requests for all implemented endpoints (`/register`, `/login`, `/pdf-upload`, `/pdf-list`, `/pdf-parse`, `/pdf-select`, `/pdf-chat`, `/chat-history`). Examples should show the required HTTP method, endpoint path, request body (JSON/form-data), headers (especially `Authorization: Bearer <token>` for protected routes), and sample expected responses (including HTTP 202 for async operations)."
+                prerequisites:
+                  # All core API endpoints must be implemented first to provide examples.
+                  - "E01-F01-S02-C01" # Register endpoint implemented
+                  - "E01-F02-S02-C01" # Login endpoint implemented
+                  - "E02-F01-S02-C01" # PDF Upload endpoint implemented
+                  - "E02-F02-S02-C01" # PDF List endpoint implemented
+                  - "E02-F03-S02-C01" # PDF Parse endpoint implemented
+                  - "E02-F04-S02-C01" # PDF Select endpoint implemented
+                  - "E03-F01-S02-C01" # PDF Chat endpoint implemented
+                  - "E03-F02-S02-C01" # Chat History endpoint implemented
+              - ref_id: "E04-F05-S01-C03"
+                name: "List and explain all required environment variables and their configuration"
+                description: "Create a dedicated section in the README listing all required and optional environment variables used by the application and worker (e.g., `DB_URL_POSTGRES`, `DB_URL_MONGO`, `JWT_SECRET_KEY`, `GEMINI_API_KEY`, `LLM_RETRY_ATTEMPTS`, `PROCRASTINATE_APP_PATH`). Explain the purpose of each variable and how to set them (e.g., via `.env` file with docker-compose, or directly in the environment for `docker run`)."
+                prerequisites:
+                  # All components using environment variables should be implemented or planned first.
+                  - "E01-F02-S02-C02" # JWT secret usage in login/auth
+                  - "E03-F01-S03-C01" # Gemini Key usage in LLM task
+                  - "E03-F01-S03-C02" # LLM Retries usage in LLM task
+                  - "E04-F04-S01-C01" # DB URI usage in Dockerfile/code
+                  - "E04-F04-S01-C02" # DB URI and other vars in docker-compose
+          - ref_id: "E04-F05-S02"
+            persona: "developer"
+            i_want: "the README.md to also cover common errors users might encounter, known issues/limitations of the current implementation, and optionally, suggest future improvement ideas for the project, so that it provides a transparent overview of the project's current state, aids troubleshooting, and fulfills the remaining README content requirements from the deliverables."
+            use_cases:
+              - ref_id: "E04-F05-S02-C01"
+                name: "Create a dedicated section explaining common errors and their resolutions"
+                description: "Establish a clearly marked section in README.md (or a separate ERRORS.md file as mentioned as an option in the PDF) explaining common HTTP errors users might receive (e.g., 401 Unauthorized, 404 Not Found, 409 Conflict, 415 Unsupported Media Type, 422 Validation Error, 429 Too Many Requests if implemented, 500 Internal Server Error, 502/503 for external issues). For each, provide the HTTP status code, a sample JSON error body, the likely cause, and suggested user actions or troubleshooting steps. Include notes on asynchronous operations (e.g., if `/pdf-parse` returns 202, how to check status via `/pdf-list`; what a failed parsing/chat status means)."
+                prerequisites:
+                  - "E04-F03-S02-C01" # Error handling mechanism is implemented
+                  - "E04-F03-S01-C01" # User-facing 4xx errors are testable
+                  - "E04-F03-S01-C02" # User-facing 5xx errors are testable
+                  - "E02-F03-S02-C03" # Parsing status update logic works
+                  - "E03-F01-S02-C03" # LLM chat status update logic works
+              - ref_id: "E04-F05-S02-C02"
+                name: "Document known issues and limitations of the current implementation"
+                description: "List any existing bugs discovered during development. Document known limitations (e.g., specific types of PDFs PyPDF2 might struggle with, current lack of multi-turn chat context for the LLM beyond the current document+question, hardcoded limits if any). This provides transparency."
+                prerequisites: [] # Based on findings during development and testing
+              - ref_id: "E04-F05-S02-C03"
+                name: "Suggest potential improvement ideas for future development (Optional)"
+                description: "Include a section (as optionally specified in the PDF) with ideas for enhancing the project in the future (e.g., implementing cursor pagination for very large lists, adding WebSockets for real-time chat updates, supporting other document types, implementing user deletion, password reset, more advanced LLM context management, adding unit tests if not fully done, implementing rate limiting if not done)."
+                prerequisites: [] # Based on project reflection after completing must-haves
+          - ref_id: "E04-F05-S03"
+            persona: "product owner"
+            i_want: "the README.md to be complete, accurate, and user-friendly for setup and API usage"
+            so_that: "it effectively communicates how to use and understand the application, reflecting positively on the project's quality and fulfilling a key deliverable requirement."
+            use_cases:
+              - ref_id: "E04-F05-S03-C01"
+                name: "Review README for completeness against project deliverables and documentation requirements"
+                description: "Verify that all specified sections (Setup/Installation (uv, Docker), Running with Docker (App, Worker), API Usage Examples, Environment Variables, Common Errors, Known Issues, Optional Improvement Ideas) are present in the README.md and adequately covered."
+                prerequisites:
+                  - "E04-F05-S01-C01"
+                  - "E04-F05-S01-C02"
+                  - "E04-F05-S01-C03"
+                  - "E04-F05-S02-C01"
+                  - "E04-F05-S02-C02"
+              - ref_id: "E04-F05-S03-C02"
+                name: "Assess clarity and accuracy of instructions and API examples in README"
+                description: "Review the content of the README to ensure instructions for setup and running are easy to follow for someone new to the project. Verify that the API usage examples are correct, clearly explained, and demonstrate how to interact with all endpoints, including handling authentication and async responses."
+                prerequisites: ["E04-F05-S03-C01"]
+              - ref_id: "E04-F05-S03-C03"
+                name: "Ensure overall professionalism, structure, and readability of README"
+                description: "Confirm the README is well-formatted using Markdown, grammatically correct, free of typos, and presents information logically and professionally."
+                prerequisites: ["E04-F05-S03-C01"]
+
+  - ref_id: "E05"
+    name: "Development & Project Standards"
+    description: "Ensure the project adheres to good development practices including modular architecture (feature folders), code quality (Ruff), and version control hygiene, as per project deliverables and discussions."
+    features:
+      - ref_id: "E05-F01"
+        name: "Modular Architecture (Feature Folders & Common Lib)"
+        description: "Structure the application with a modular architecture using feature-based folders (account, pdf, chat) and a common library folder, implementing domain modeling concepts with repository pattern."
+        user_stories:
+          - ref_id: "E05-F01-S01"
+            persona: "developer"
+            i_want: "to structure the FastAPI project into feature folders (account, pdf, chat) each containing its own models, schemas, routers, services, repositories (with interfaces), domain logic, and tests, plus a common `lib` folder for shared utilities, so that the codebase is highly modular, maintainable, testable, aligns with DDD principles (aggregates, repositories), and meets the 'modular, scalable architecture' deliverable."
+            use_cases:
+              - ref_id: "E05-F01-S01-C01"
+                name: "Establish feature-based directory structure and initial `uv` setup"
+                description: "Set up the main project directory with `pyproject.toml` (for `uv`), requirements file(s), and create the core `app/` directory. Inside `app/`, create feature subdirectories (`account/`, `pdf/`, `chat/`) and a `lib/` directory. Establish base `app/main.py` to include routers from features. Ensure `uv` is configured as the package manager."
+                prerequisites: [] # Foundational project setup decision
+              - ref_id: "E05-F01-S01-C02"
+                name: "Implement Repository Pattern interfaces and async concrete implementations per feature"
+                description: "For each identified aggregate root (User in Account, PDFDocument in PDF, conceptual ChatConversation or Message in Chat), define a repository interface (Python Protocol) in the domain layer (`app/account/domain.py`, `app/pdf/domain.py`, `app/chat/domain.py`). Implement concrete async repository classes (e.g., `SQLAlchemyUserRepository`, `MongoPDFRepository`, `SQLAlchemyChatRepository`) within an infrastructure sub-layer of each feature (e.g., `app/account/infrastructure/`). These implementations should use SQLAlchemy async for PG and Pymongo async for Mongo as defined in E04-F01. Inject these concrete repository implementations into application services using FastAPI's `Depends`."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Directory structure allows for domain/infra layers
+                  - "E04-F01-S01-C01" # DB Schemas defined (User, ChatLogs)
+                  - "E04-F01-S01-C02" # DB Schemas defined (PDF Meta, Parsed Text)
+
+              - ref_id: "E05-F01-S01-C03"
+                name: "Apply Domain-Driven Design concepts (Aggregates, Entities, Value Objects) in domain layers"
+                description: "Identify the core aggregate roots (User, PDFDocument, ChatMessageTurn). Define these as classes in the `domain.py` files within their respective features, along with any entities or value objects they contain. Ensure application services orchestrate logic using these domain objects, and repositories return/save these domain objects (or mappings to them) rather than just raw database models or dictionaries."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Directory structure allows for domain layer per feature
+                  - "E04-F01-S01-C03" # Mapping from domain to storage is defined
+
+          - ref_id: "E05-F01-S02"
+            persona: "product owner"
+            i_want: "the submitted project to have a demonstrably modular and scalable architecture, with clear separation of concerns as discussed (feature folders, DDD layers)"
+            so_that: "it meets the key architectural deliverable and showcases good software engineering practices for review."
+            use_cases:
+              - ref_id: "E05-F01-S02-C01"
+                name: "Review project structure for feature modularity and layered architecture"
+                description: "Examine the project's directory structure (`app/account/`, `app/pdf/`, `app/chat/`, `app/lib/`) and the organization of code within features (routers, services, domain, infrastructure) to confirm it reflects a modular and layered design approach with clear separation of concerns."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Dev implementation of structure
+              - ref_id: "E05-F01-S02-C02"
+                name: "Assess implementation of Repository Pattern and interfaces"
+                description: "Review the code to check for the definition and use of repository interfaces (Protocols) and their concrete implementations. Confirm that services interact with repositories via interfaces, demonstrating separation of concerns and enabling testability (e.g., by mocking interfaces)."
+                prerequisites:
+                  - "E05-F01-S01-C02" # Dev implementation of repositories
+              - ref_id: "E05-F01-S02-C03"
+                name: "Identify use of domain modeling concepts for core entities"
+                description: "Review the code in `app/feature/domain.py` files. Look for classes representing core entities/aggregates (User, PDFDocument, etc.) and how they are used by services and repositories. Confirm that business logic, where applicable, resides within domain objects or services operating on them, rather than solely in API routers or repositories."
+                prerequisites:
+                  - "E05-F01-S01-C03" # Dev implementation of domain models
+
+      - ref_id: "E05-F02"
+        name: "Code Quality (Ruff) and Python Best Practices"
+        description: "Write clean, idiomatic Python code following best practices (PEP 8), using Ruff for linting/formatting, and well-structured, commented async code."
+        user_stories:
+          - ref_id: "E05-F02-S01"
+            persona: "developer"
+            i_want: "to write clean, well-commented async Python code, adhering to PEP 8 (enforced by Ruff), FastAPI best practices, and using type hints extensively, with `uv` managing the development environment"
+            so_that: "the code is readable, maintainable, high quality, and meets the 'Well-structured and commented code' deliverable."
+            use_cases:
+              - ref_id: "E05-F02-S01-C01"
+                name: "Configure and use Ruff for linting and formatting throughout the project"
+                description: "Install Ruff (`uv add ruff`). Configure Ruff in `pyproject.toml` or `ruff.toml` to enforce code style (PEP 8), check for common errors (Pyflakes), and potentially auto-format (like Black/isort). Integrate Ruff into the development workflow (e.g., set up pre-commit hooks, or establish manual `ruff check --fix .` and `ruff format .` as standard practice before committing)."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Project structure and uv setup are in place
+              - ref_id: "E05-F02-S01-C02"
+                name: "Write comprehensive docstrings and comments for clarity"
+                description: "Provide meaningful docstrings for all public modules, classes, methods, and functions, explaining their purpose, arguments, return values, and raised exceptions (e.g., using Google style, NumPy style, or Sphinx-compatible formats). Add inline comments for complex logic sections or non-obvious code."
+                prerequisites: [] # Ongoing developer discipline throughout feature implementation
+              - ref_id: "E05-F02-S01-C03"
+                name: "Leverage `async`/`await` and type hints consistently across the codebase"
+                description: "Ensure `async def` is used correctly for all I/O bound operations, including database calls (using SQLAlchemy async sessions/methods, async Pymongo methods), HTTP calls (e.g., to the LLM API), and Procrastinate task definitions. Apply Python type hints extensively to function signatures, variables, and Pydantic models for improved code clarity, static analysis benefits (e.g., if using MyPy or Ruff type checking rules), and better IDE support."
+                prerequisites: [] # Ongoing developer discipline throughout feature implementation
+
+      - ref_id: "E05-F03"
+        name: "Version Control Hygiene (Git)"
+        description: "Maintain a clean and professional commit history in the Git repository, as per deliverables."
+        user_stories:
+          - ref_id: "E05-F03-S01"
+            persona: "developer"
+            i_want: "to maintain a clean, understandable, and professional Git commit history with descriptive, atomic messages, using branches for features where appropriate"
+            so_that: "project evolution is easy to track, understand, review, and revert if necessary, meeting the 'Clean commit history' deliverable."
+            use_cases:
+              - ref_id: "E05-F03-S01-C01"
+                name: "Write meaningful commit messages following a convention"
+                description: "Adopt a commit message convention (e.g., Conventional Commits - `feat(<scope>): <subject>`) or similar standard for clarity (e.g., `fix: ...`, `feat: ...`, `chore: ...`). The subject line should summarize the change in the imperative mood, and the body can provide more detail if needed. Reference related User Story/Use Case IDs if helpful (e.g., `feat(auth): Implement /register endpoint E01-F01-S02-C01`)."
+                prerequisites: [] # Ongoing developer discipline
+              - ref_id: "E05-F03-S01-C02"
+                name: "Make atomic and logical commits on feature branches"
+                description: "Group related code changes into single commits that represent one logical step, feature increment, or bug fix. Avoid mixing unrelated changes in one commit. Use feature branches for development (e.g., `feature/E01-F01-user-registration`) and merge via pull/merge requests (even if working solo, this is good practice for history review)."
+                prerequisites: [] # Ongoing developer discipline
+              - ref_id: "E05-F03-S01-C03"
+                name: "Ensure effective use of .gitignore to exclude unnecessary files"
+                description: "Maintain a comprehensive `.gitignore` file in the project root. Exclude build artifacts (e.g., Python `__pycache__/`, compiled `.pyc` files), virtual environment directories (`.venv/`), static analysis caches (`.ruff_cache/`, `.mypy_cache/` if used), actual sensitive configuration files (`.env` files containing secrets), IDE specific project files, operating system generated files (like `.DS_Store`), etc."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Initial project setup is in place
+
+      - ref_id: "E05-F04"
+        name: "Testing (Pytest for Unit/Integration, Behave for BDD - Basic Functional)"
+        description: "Implement unit tests and integration tests using Pytest (with FastAPI TestClient and potentially in-memory/SQLite for speed if applicable for some tests), and a few BDD-style functional tests using Behave with Docker for overall system check."
+        user_stories:
+          - ref_id: "E05-F04-S01"
+            persona: "developer"
+            i_want: "to write unit tests using Pytest for services/domain logic (mocking repositories/external calls), integration tests using Pytest with FastAPI TestClient for API endpoints (using dependency overrides for DBs where appropriate for speed, or dedicated test DBs), and a few high-level BDD scenarios using Behave run against the Dockerized stack"
+            so_that: "core logic is verified, API contracts are tested, basic system functionality is confirmed end-to-end, and good testing practices are demonstrated (as 'unit tests are not mandatory but will be a plus', and BDD is for overall acceptance)."
+            use_cases:
+              - ref_id: "E05-F04-S01-C01"
+                name: "Write unit tests using Pytest for services and domain logic"
+                description: "Create test files (e.g., `test_unit.py`) within each feature's test directory (e.g., `app/account/tests/unit/`). Write tests for service layer methods and domain model logic in isolation. Use mocking libraries (e.g., `unittest.mock`, `pytest-mock`) to replace external dependencies like repository calls, database sessions, or LLM API calls. Focus on verifying business rules, validation, and state changes within the tested unit."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Feature structure exists for tests directory
+                  - "E05-F01-S01-C02" # Repository interfaces are defined for mocking
+                  # Specific service/domain logic to be tested must be implemented first, e.g.
+                  # E01-F01-S02-C01 (Registration service logic is testable)
+              - ref_id: "E05-F04-S01-C02"
+                name: "Write integration tests using Pytest with FastAPI TestClient for API endpoints"
+                description: "Create test files (e.g., `test_integration.py`) within each feature's test directory (e.g., `app/account/tests/integration/`). Use FastAPI's `TestClient` to make simulated HTTP requests to the application's routers. For database interactions, set up dependency overrides in FastAPI test fixtures to inject in-memory or SQLite-backed repository implementations for faster isolated tests, OR configure pytest to use dedicated test database instances (Postgres/Mongo containers spun up for testing) for more realistic integration test scenarios. Verify endpoint behavior, Pydantic validation, authentication checks, status codes, and basic response structure for all main API endpoints."
+                prerequisites:
+                  - "E05-F01-S01-C01" # Feature structure exists for integration tests directory
+                  - "E01-F03-S02-C01" # Authentication dependency implemented
+                  - "E05-F01-S01-C02" # Repository interfaces defined (for potential dependency overrides)
+                  - "E04-F04-S01-C02" # Docker compose setup if using test DB instances
+
+              - ref_id: "E05-F04-S01-C03"
+                name: "Write BDD functional tests using Behave for key end-to-end user flows"
+                description: "Create a top-level `features/` directory. Write Behave `.feature` files using Gherkin syntax to describe key end-to-end user flows from the perspective of a user (e.g., 'Given a user is registered...', 'When the user uploads a PDF...', 'Then the PDF appears in their list...'). Implement step definitions in `features/steps/` that use Python's `requests` library (or similar HTTP client) to interact with the API endpoints of the *fully Dockerized* application stack (the app, worker, and databases running via `docker-compose` for a test environment). Focus on verifying that the major features connect and function correctly from an external perspective."
+                prerequisites:
+                  - "E04-F04-S01-C03" # Fully working docker-compose stack for testing environment
+                  # Core features to be E2E tested must be fully implemented and connected.
+                  - "E01-F02-S01-C01" # Basic Auth flow works end-to-end
+                  - "E02-F04-S01-C01" # PDF lifecycle (upload, parse, select) works end-to-end
+                  - "E03-F01-S01-C01" # Chat flow works end-to-end
+                  - "E03-F02-S01-C01" # History retrieval works end-to-end
+          - ref_id: "E05-F04-S02"
+            persona: "product owner"
+            i_want: "the inclusion of tests (unit, integration, and a few BDD functional) to be recognized as a significant plus for the project submission"
+            so_that: "the application demonstrates higher quality, robustness, and a commitment to comprehensive testing practices, contributing positively to the evaluation."
+            use_cases:
+              - ref_id: "E05-F04-S02-C01"
+                name: "Verify key business logic is covered by unit tests"
+                description: "Review the scope and focus of the unit tests to confirm that they cover the most critical business logic within the service layer methods and core domain logic (e.g., password hashing verification, PDF selection state management logic, logic for formatting prompts for the LLM, handling LLM task results)."
+                prerequisites:
+                  - "E05-F04-S01-C01" # Dev implementation of unit tests
+              - ref_id: "E05-F04-S02-C02"
+                name: "Confirm main API endpoints have integration tests"
+                description: "Review the integration tests to ensure they cover the core API endpoint behaviors, including validation, authentication, successful responses, and expected error responses for common client-side error cases."
+                prerequisites:
+                  - "E05-F04-S01-C02" # Dev implementation of integration tests
+              - ref_id: "E05-F04-S02-C03"
+                name: "Review BDD functional tests for end-to-end coverage of the core user journey"
+                description: "Examine the Behave `.feature` files and step definitions. Confirm that the BDD tests cover a basic end-to-end user journey through the application (e.g., registering, logging in, uploading a PDF, initiating parsing, selecting the PDF, asking a question, retrieving history) to demonstrate that the major features are correctly integrated and functional in the deployed environment."
+                prerequisites:
+                  - "E05-F04-S01-C03" # Dev implementation of BDD tests
