@@ -1,0 +1,9 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.11 # Use the latest version of Ruff
+    hooks:
+      - id: ruff
+        args: [--fix]
+        exclude: ^todo\.yaml$
+      - id: ruff-format
+        exclude: ^todo\.yaml$

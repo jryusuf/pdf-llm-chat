@@ -1,0 +1,22 @@
+# Byte-code files
+*.pyc
+__pycache__/
+
+# Virtual environment
+.venv/
+
+# Ruff cache
+.ruff_cache/
+
+# MyPy cache
+.mypy_cache/
+
+# dotenv files
+.env
+.flaskenv
+
+# IDE specific files
+.vscode/
+
+# OS generated files
+.DS_Store
