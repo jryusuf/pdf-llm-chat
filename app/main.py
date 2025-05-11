@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 
 # Import database components
-from .core.dependencies import async_engine, Base
+from app.core.dependencies import async_engine, Base
 
 # Import routers from feature modules
-from .account.controller.routers import router as account_router
-# from .pdf import router as pdf_router
+from app.account.controller.routers import router as account_router
+from app.pdf.controller.routers import router as pdf_router  # Corrected import path
 # from .chat import router as chat_router
 
 app = FastAPI()
@@ -26,7 +26,7 @@ def read_root():
 
 # Include feature routers
 app.include_router(account_router, prefix="/account", tags=["account"])
-# app.include_router(pdf_router, prefix="/pdf", tags=["pdf"])
+app.include_router(pdf_router, tags=["pdf"])  # Uncommented
 # app.include_router(chat_router, prefix="/chat", tags=["chat"])
 
 # You can run this app using `uvicorn app.main:app --reload`

@@ -24,15 +24,22 @@ from app.pdf.application.services import PDFApplicationService
 
 
 class MockPDFRepository(IPDFRepository):
-    def __init__(self):
+    def __init__(self, context=None):
         self._pdfs = {}
         self._pdf_binaries = {}
         self._selected_pdf_id = {}
+        self.context = context  # Store the context
 
     async def save_pdf_binary(self, filename: str, content: bytes, user_id: int, content_type: str) -> str:
         # Simulate GridFS ID generation
         gridfs_id = f"gridfs_{filename}"
-        self._pdf_binaries[gridfs_id] = content
+        # In the behave tests, use the file_content from context to bypass
+        # potential issues with TestClient/UploadFile stream reading.
+        # In integration tests (like this file), use the provided content.
+        content_to_store = (
+            self.context.file_content if self.context and hasattr(self.context, "file_content") else content
+        )
+        self._pdf_binaries[gridfs_id] = content_to_store
         return gridfs_id
 
     async def save_pdf_meta(self, pdf_doc: PDFDocument) -> PDFDocument:

@@ -13,6 +13,10 @@ class TokenPayload(BaseModel):
     exp: Optional[int] = None
 
 
+class AuthenticatedUser(BaseModel):
+    id: int  # The internal integer user_id
+
+
 # Reusable OAuth2 scheme - define once
 # tokenUrl should point to your actual login endpoint if you use
 # Swagger UI's "Authorize" button
@@ -53,6 +57,38 @@ async def get_current_user_payload(
 
         token_data = TokenPayload(sub=user_uuid, exp=payload.get("exp"))
         return token_data
+    except JWTError as e:
+        raise credentials_exception
+    except ValidationError:
+        raise credentials_exception
+
+
+async def get_current_authenticated_user(
+    token: Annotated[str, Depends(oauth2_scheme)], app_settings: Annotated[Settings, Depends(get_settings)]
+) -> AuthenticatedUser:  # Returns an object with the user's integer ID
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, app_settings.JWT_SECRET_KEY, algorithms=[app_settings.ALGORITHM])
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            raise credentials_exception
+
+        try:
+            user_id_int = int(user_id_str)
+        except ValueError:
+            raise credentials_exception
+
+        # Here, you could add a step to fetch the user from the DB using user_id_int
+        # via AccountApplicationService or IUserRepository to check if they are active.
+        # For this example, we'll assume the token existing means user is valid & active for simplicity.
+        # If you do fetch, the dependency would return UserDomainModel or UserInDB Pydantic schema.
+        # For now, we just return the ID.
+
+        return AuthenticatedUser(id=user_id_int)
     except JWTError as e:
         raise credentials_exception
     except ValidationError:
