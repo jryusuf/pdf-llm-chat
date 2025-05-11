@@ -11,6 +11,7 @@ from app.account.controller.dependencies import get_current_user  # Import the a
 from app.account.domain.models import User as UserDomainModel  # Import UserDomainModel
 from app.pdf.controller.dependencies import (
     get_pdf_repository,
+    get_pdf_application_service,  # Import get_pdf_application_service
 )  # Import the PDF repository dependency to override
 
 
@@ -40,6 +41,8 @@ def before_all(context):
     # applied before each scenario.
     context.client = TestClient(app)
 
+    # The defer_parse_task dependency override will be set in before_scenario
+
 
 def after_all(context):
     """Clean up the test environment after all scenarios."""
@@ -63,8 +66,13 @@ def before_scenario(context, scenario):
     # Apply dependency overrides for the new mock instances
     # Override the get_pdf_repository dependency to return the mock repository
     app.dependency_overrides[get_pdf_repository] = lambda: context.pdf_repo
-    # Override the PDF application service dependency (if used directly in routers)
-    # app.dependency_overrides[PDFApplicationService] = lambda: context.pdf_service
+    # Override the PDF application service dependency provider
+    # This ensures the service uses the scenario-specific mock repository and defer task.
+    app.dependency_overrides[get_pdf_application_service] = lambda: PDFApplicationService(
+        pdf_repo=context.pdf_repo,
+        settings=MagicMock(),  # Use a mock settings object
+        defer_parse_task=context.defer_parse_task,
+    )
 
     # Override the get_current_user dependency to simulate authentication
     # This lambda will be called by FastAPI's dependency injection system.
