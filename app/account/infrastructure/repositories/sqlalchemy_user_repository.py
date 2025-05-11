@@ -84,6 +84,6 @@ class SQLAlchemyUserRepository(IUserRepository):
             db_user.user_uuid = uuid.uuid4()
 
         self.session.add(db_user)
-        await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(db_user)
         return db_user.to_domain()
