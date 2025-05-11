@@ -66,7 +66,15 @@ dev = [
 find = { include = ["app*"] }
 
 [tool.pytest.ini_options]
-testpaths = ["app/account/tests/unit", "app/account/tests/integration", "app/tests/unit", "app/pdf/tests/integration","app/pdf/tests/unit"] # Include the new unit test directory
+testpaths = [
+    "app/account/tests/unit", 
+    "app/account/tests/integration", 
+    "app/tests/unit", 
+    "app/pdf/tests/integration",
+    "app/pdf/tests/unit",
+    "app/chat/tests/unit",
+    "app/chat/tests/integration"
+] # Include the new unit test directory
 pythonpath = "."
 markers = [
     "anyio: marks tests as requiring anyio"
