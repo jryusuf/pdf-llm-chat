@@ -1,37 +1,41 @@
-# (This is where Procrastinate tasks are defined)
-# from procrastinate import App # Assuming app instance is created elsewhere and passed or imported
-# from loguru import logger
-# from app.core.config import Settings
-# from app.chat.domain.interfaces.chat_repository import IChatRepository
-# from app.pdf.domain.interfaces.pdf_repository import IPDFRepository
-# # from some_llm_client import GeminiClient # Your LLM client
+async def generate_llm_response_task(
+    chat_turn_id: int,
+    # These would be provided by Procrastinate's dependency injection/context
+    chat_repo: IChatRepository,
+    pdf_repo: IPDFRepository,
+    settings: Settings,
+    llm_client: YourLLMClient,  # Your Gemini client
+):
+    chat_turn = await chat_repo.get_chat_turn_by_id(chat_turn_id)  # Need user_id too for get_chat_turn
+    # The get_chat_turn_by_id might need user_id if it's part of its query logic for security
+    # or the task context from Procrastinate might already have user_id.
+    # For simplicity, assume chat_turn_id is globally unique enough for task to fetch its details.
+    if not chat_turn:  # log error, return
+        return
 
-# async def generate_llm_response_task(
-#     chat_turn_id: int,
-#     # Dependencies will be injected by Procrastinate if configured correctly
-#     # This requires setting up Procrastinate with dependency injection capabilities
-#     # For simplicity here, let's assume these are passed or accessible via a global context
-#     # In a real Procrastinate setup, you'd configure context for tasks.
-#     # chat_repo: IChatRepository,
-#     # pdf_repo: IPDFRepository,
-#     # settings: Settings,
-#     # llm_client: GeminiClient
-# ):
-#    # This is highly conceptual as Procrastinate DI is setup specific
-#    # logger.info(f"Procrastinate task started for chat_turn_id: {chat_turn_id}")
-#    # 1. Fetch chat_turn from chat_repo using chat_turn_id
-#    # 2. Mark chat_turn.llm_response_status as PROCESSING, update in repo
-#    # 3. Fetch parsed_text from pdf_repo using chat_turn.pdf_document_id
-#    # 4. Construct prompt (parsed_text + user_message_content from chat_turn)
-#    # 5. Call LLM client (with retries based on settings.LLM_RETRY_ATTEMPTS)
-#    # 6. On success: chat_turn.set_llm_response_success(llm_client_response)
-#    # 7. On failure: chat_turn.set_llm_response_failure()
-#    # 8. Update chat_turn in chat_repo
-#    # logger.info(f"Procrastinate task finished for chat_turn_id:
-#  {chat_turn_id} with status {chat_turn.llm_response_status}")
-#    pass # Placeholder for actual Procrastinate task logic
+    # Mark as processing
+    chat_turn.mark_llm_processing()
+    await chat_repo.update_llm_response_in_turn(chat_turn)
 
-# Example of how you might defer (needs procrastinate_app instance)
-# async def enqueue_llm_response_generation(procrastinate_app: App, chat_turn_id: int):
-#    await procrastinate_app.defer_async(generate_llm_response_task, chat_turn_id=chat_turn_id)
-#    pass
+    parsed_text = await pdf_repo.get_parsed_text_by_pdf_meta_id(chat_turn.pdf_document_id)
+    if not parsed_text:  # log error, mark failed, return
+        chat_turn.set_llm_response_failure()  # Or a more specific status
+        await chat_repo.update_llm_response_in_turn(chat_turn)
+        return
+
+    prompt = parsed_text + "\n\nUser question: " + chat_turn.user_message_content
+
+    # LLM Call with retries
+    # response_content = None
+    # for attempt in range(settings.LLM_RETRY_ATTEMPTS):
+    #     try:
+    #         response_content = await llm_client.generate(prompt)
+    #         chat_turn.set_llm_response_success(response_content)
+    #         break
+    #     except Exception as e:
+    #         # log e
+    #         if attempt == settings.LLM_RETRY_ATTEMPTS - 1:
+    #             chat_turn.set_llm_response_failure()
+    #
+    # await chat_repo.update_llm_response_in_turn(chat_turn)
+    pass

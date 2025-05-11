@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from app.chat.domain.models import LLMResponseStatus, MessageSenderType
@@ -9,17 +9,17 @@ class ChatMessageRequest(BaseModel):
 
 
 class ChatMessageTurnResponse(BaseModel):
-    id: int
-    pdf_id: str
-    pdf_filename: str
-    user_message: str
-    user_timestamp: datetime
-    llm_response: Optional[str]
-    llm_status: LLMResponseStatus
-    llm_timestamp: Optional[datetime]
+    id: int  # Changed back to int
+    user_id: int
+    pdf_document_id: str
+    pdf_original_filename: str
+    user_message_content: str
+    user_message_timestamp: datetime
+    llm_response_content: Optional[str]  # Inferred from service logic
+    llm_response_status: LLMResponseStatus
+    llm_response_timestamp: Optional[datetime]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaginatedChatHistoryResponse(BaseModel):
