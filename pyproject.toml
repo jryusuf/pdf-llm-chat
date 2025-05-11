@@ -5,6 +5,7 @@ description = "A PDF chat application"
 authors = [{name = "Yusuf", email = "yusufyuksel.uk@hotmail.com"}]
 requires-python = ">=3.13"
 dependencies = [
+    "fastapi>=0.115.12", # Moved from dev-dependencies
     "pre-commit>=4.2.0",
     "ruff>=0.11.9",
     "passlib>=1.7.4",
@@ -38,13 +39,9 @@ lint.ignore = [
 #    "D104", # Missing package docstring
 ]
 
-
-[tool.uv]
-
 [dependency-groups]
 dev = [
     "behave>=1.2.6",
-    "fastapi>=0.115.12",
     "httpx>=0.28.1",
     "pytest>=8.3.5",
     "pydantic-settings>=2.0.0", # Added pydantic-settings to dev group
@@ -80,9 +77,6 @@ markers = [
     "anyio: marks tests as requiring anyio"
 ]
 anyio_backend = "asyncio"
-
-[project.scripts]
-start = "uvicorn app.main:app --reload"
 
 [tool.behave]
 paths = [
