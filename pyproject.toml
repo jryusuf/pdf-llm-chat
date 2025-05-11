@@ -50,5 +50,5 @@ dev = [
 find = { include = ["app*"] }
 
 [tool.pytest.ini_options]
-testpaths = ["app/account/tests/unit", "app/account/tests/integration"]
+testpaths = ["app/account/tests/unit", "app/account/tests/integration", "app/tests/unit"] # Include the new unit test directory
 pythonpath = "."
