@@ -14,7 +14,6 @@ dependencies = [
     "email-validator>=2.0.0",
     "python-jose[cryptography]>=3.3.0",
     "motor>=3.7.0",
-    "pytest-asyncio>=0.26.0",
     "mongomock>=4.3.0",
     "mongomock-motor>=0.0.35",
 ] # Add dependencies here later
@@ -46,7 +45,6 @@ dev = [
     "fastapi>=0.115.12",
     "httpx>=0.28.1",
     "pytest>=8.3.5",
-    "pytest-asyncio>=0.23.0",
 ]
 # uv specific configurations can go here
 
@@ -54,5 +52,9 @@ dev = [
 find = { include = ["app*"] }
 
 [tool.pytest.ini_options]
-testpaths = ["app/account/tests/unit", "app/account/tests/integration", "app/tests/unit"] # Include the new unit test directory
+testpaths = ["app/account/tests/unit", "app/account/tests/integration", "app/tests/unit", "app/pdf/tests/integration"] # Include the new unit test directory
 pythonpath = "."
+markers = [
+    "anyio: marks tests as requiring anyio"
+]
+anyio_backend = "asyncio"
