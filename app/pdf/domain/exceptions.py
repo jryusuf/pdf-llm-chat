@@ -3,9 +3,10 @@ class PDFDomainError(Exception):
 
 
 class PDFNotFoundError(PDFDomainError):
-    # def __init__(self, pdf_id: str):
-    #     self.pdf_id = pdf_id
-    #     super().__init__(f"PDF with ID '{pdf_id}' not found.")
+    def __init__(self, pdf_id: str):
+        self.pdf_id = pdf_id
+        super().__init__(f"PDF with ID '{pdf_id}' not found.")
+
     pass
 
 
