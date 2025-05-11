@@ -13,9 +13,11 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "email-validator>=2.0.0",
     "python-jose[cryptography]>=3.3.0",
+    "pytest-cov>=6.1.1",
     "motor>=3.7.0",
     "mongomock>=4.3.0",
    # "mongomock-motor>=0.0.35",
+
 ] # Add dependencies here later
 
 [tool.ruff]
