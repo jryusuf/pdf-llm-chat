@@ -8,13 +8,7 @@ from app.account.infrastructure.repositories.user_repository import IUserReposit
 from app.account.infrastructure.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
 )
-from app.account.application.services import (
-    AccountApplicationService,
-    JWT_SECRET_KEY,
-    ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    create_access_token,
-)
+from app.account.application.services import AccountApplicationService
 from app.account.application.schemas import (
     UserCreateRequest,
     UserRegisteredResponse,
@@ -36,6 +30,9 @@ from app.account.tests.integration.conftest import (
     create_dummy_domain_user,
 )
 
+from app.core.config import get_settings
+from app.lib.security import create_access_token
+
 
 # Fixture for providing an AccountApplicationService instance
 @pytest_asyncio.fixture(scope="function")
@@ -43,7 +40,8 @@ async def account_service(
     user_repository: IUserRepository,
 ) -> AccountApplicationService:
     """Fixture for providing an AccountApplicationService instance."""
-    return AccountApplicationService(user_repo=user_repository)
+    settings = get_settings()
+    return AccountApplicationService(user_repo=user_repository, settings=settings)
 
 
 # Integration tests for AccountApplicationService
@@ -110,7 +108,10 @@ async def test_login_user_success(
 
     # Verify the token payload
     try:
-        payload = jwt.decode(response.access_token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        settings = get_settings()
+        payload = jwt.decode(
+            response.access_token, settings.JWT_SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         assert payload.get("sub") == str(user_domain.user_uuid)
         assert "exp" in payload
         # Check expiration is in the future (with a small tolerance)
