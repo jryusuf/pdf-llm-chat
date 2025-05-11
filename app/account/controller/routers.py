@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db_session
 
+from app.core.config import get_settings
 from app.account.application.services import AccountApplicationService
 from app.account.application.schemas import (
     UserCreateRequest,
@@ -29,7 +30,8 @@ def get_user_repository(
 def get_account_application_service(
     user_repo: IUserRepository = Depends(get_user_repository),
 ) -> AccountApplicationService:
-    return AccountApplicationService(user_repo=user_repo)
+    settings = get_settings()
+    return AccountApplicationService(user_repo=user_repo, settings=settings)
 
 
 router = APIRouter()

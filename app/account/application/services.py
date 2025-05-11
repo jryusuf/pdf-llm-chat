@@ -9,6 +9,8 @@ from app.account.domain.exceptions import (
     InvalidCredentialsError,
     UserNotFoundError,
 )
+from app.core.config import get_settings, Settings
+from app.lib.security import create_access_token
 from .schemas import (
     UserCreateRequest,
     UserRegisteredResponse,
@@ -18,25 +20,11 @@ from .schemas import (
 
 from jose import jwt, JWTError
 
-JWT_SECRET_KEY = "your-super-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
 
 class AccountApplicationService:
-    def __init__(self, user_repo: IUserRepository):
+    def __init__(self, user_repo: IUserRepository, settings: Settings):
         self.user_repo = user_repo
+        self.settings = settings
 
     async def register_user(self, user_data: UserCreateRequest) -> UserRegisteredResponse:
         existing_user = await self.user_repo.get_by_email(user_data.email)
@@ -58,9 +46,8 @@ class AccountApplicationService:
         if not user_domain_obj.is_active:
             raise InvalidCredentialsError
 
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token_data = {"sub": str(user_domain_obj.user_uuid)}
-        access_token = create_access_token(data=access_token_data, expires_delta=access_token_expires)
+        access_token = create_access_token(data=access_token_data, settings=self.settings)
 
         return TokenResponse(access_token=access_token, user_uuid=user_domain_obj.user_uuid)
 

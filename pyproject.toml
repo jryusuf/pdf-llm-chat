@@ -13,6 +13,7 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "email-validator>=2.0.0",
     "python-jose[cryptography]>=3.3.0",
+    "pytest-cov>=6.1.1",
 ] # Add dependencies here later
 
 [tool.ruff]
@@ -50,5 +51,5 @@ dev = [
 find = { include = ["app*"] }
 
 [tool.pytest.ini_options]
-testpaths = ["app/account/tests/unit", "app/account/tests/integration"]
+testpaths = ["app/account/tests/unit", "app/account/tests/integration", "app/tests/unit"] # Include the new unit test directory
 pythonpath = "."

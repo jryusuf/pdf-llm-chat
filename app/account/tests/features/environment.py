@@ -1,16 +1,17 @@
 import asyncio
-from fastapi import FastAPI  # Removed APIRouter import
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-from app.main import app  # Use the main app instance
+from app.main import app
 from app.account.infrastructure.repositories.sqlalchemy_user_repository import Base
-from app.core.dependencies import get_db_session  # Import get_db_session from core
+from app.core.dependencies import get_db_session
 
 # Removed account_router import as it's included in app.main
 from app.account.domain.models import User as UserDomainModel
 from app.account.infrastructure.repositories.sqlalchemy_user_repository import (
     SQLAlchemyUserRepository,
+    UserDB,
 )
 
 
@@ -87,8 +88,21 @@ def after_scenario(context, scenario):
 # Helper function to add a user directly via the repository for test setup
 async def add_user_via_repo(session: AsyncSession, email: str, plain_password: str) -> UserDomainModel:
     user_domain = UserDomainModel.create_new(email=email, plain_password=plain_password)
+    # Create a UserDB instance from the domain model
+    user_db = UserDB(
+        user_uuid=user_domain.user_uuid,
+        email=user_domain.email,
+        hashed_password=user_domain.hashed_password,
+        is_active=user_domain.is_active,
+        created_at=user_domain.created_at,
+        updated_at=user_domain.updated_at,
+    )
     repo = SQLAlchemyUserRepository(session)
-    return await repo.add(user_domain)
+    # Add the mapped UserDB instance to the session (remove await)
+    repo.session.add(user_db)
+    await repo.session.flush()  # Flush to assign primary key if needed, but don't commit
+    # Return the domain model instance for consistency with the original function signature
+    return user_domain
 
 
 # Make helper available in context - need to run this in before_all or similar if it depends on context
