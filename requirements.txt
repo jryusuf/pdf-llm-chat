@@ -1,5 +1,5 @@
 # Core Application Dependencies
-fastapi>=0.115.12
+fastapi[standard]
 uvicorn[standard]>=0.20.0
 sqlalchemy[asyncio]>=2.0.0
 psycopg[binary]>=3.1.8 # Binary package recommended for performance/installation
@@ -13,18 +13,4 @@ email-validator>=2.0.0
 pypdf>=4.0.0 # For PDF parsing
 loguru>=0.6.0 # For logging
 python-dotenv>=1.0.0 # For .env file loading
-# Core Application Dependencies
-fastapi>=0.115.12
-uvicorn[standard]>=0.20.0
-sqlalchemy[asyncio]>=2.0.0
-psycopg[binary]>=3.1.8 # Binary package recommended for performance/installation
-motor>=3.7.0
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
-python-jose[cryptography]>=3.3.0
-passlib>=1.7.4
-bcrypt>=4.1.3
-email-validator>=2.0.0
-pypdf>=4.0.0 # For PDF parsing
-loguru>=0.6.0 # For logging
-python-dotenv>=1.0.0 # For .env file loading
+

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@db:5432/appdb"
     MONGO_URL: str = ""
 
-    GEMINI_API_KEY: str = "AIzaSyBLXXAQPrZETV-R1xU37UaD4esoc_BikyU"
+    GEMINI_API_KEY: str = ""
     GEMINI_SYSTEM_PROMPT: str = (
         "You are a helpful AI assistant that answers questions based on the provided document."
     )

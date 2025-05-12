@@ -8,6 +8,8 @@ services:
     environment:
       - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/appdb
       - MONGO_URL=mongodb://mongo_user:mongo_password@mongo:27017/appdb?authSource=admin
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_SYSTEM_PROMPT=${GEMINI_SYSTEM_PROMPT}
     depends_on:
       - db
       - mongo
