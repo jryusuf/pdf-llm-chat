@@ -14,6 +14,8 @@ This project is a RESTful API built with FastAPI that allows users to upload PDF
 
 For a detailed overview of the system's architecture, see the [ARCHITECTURE.md](ARCHITECTURE.md) file.
 
+For information on API errors and domain exceptions, see the [ERRORS.md](ERRORS.md) file.
+
 ## Tech Stack
 
 *   **Backend Framework:** FastAPI
