@@ -7,6 +7,8 @@ UVICORN := $(VENV_DIR)/bin/uvicorn
 PYTEST := $(VENV_DIR)/bin/pytest
 BEHAVE := $(VENV_DIR)/bin/behave
 BEHAVE_ACCOUNT := $(VENV_DIR)/bin/behave app/account/tests/features
+BEHAVE_CHAT := $(VENV_DIR)/bin/behave app/chat/tests/features
+BEHAVE_PDF := $(VENV_DIR)/bin/behave app/pdf/tests/features
 
 # Default target
 all: setup-dev install-dev
@@ -42,6 +44,10 @@ test: $(VENV_DIR)/bin/activate
 	$(BEHAVE)
 	@echo "\nRunning account service behave tests..."
 	$(BEHAVE_ACCOUNT)
+	@echo "\nRunning pdf service behave tests..."
+	$(BEHAVE_PDF)
+	@echo "\nRunning chat service behave tests..."
+	$(BEHAVE_CHAT)
 
 # Clean up virtual environment and __pycache__ directories
 clean:
