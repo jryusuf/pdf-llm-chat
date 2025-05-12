@@ -32,11 +32,30 @@ class PDFApplicationService:
         settings: Settings,
         defer_parse_task: DeferPDFParseTaskType,
     ):
+        """Initializes the PDFApplicationService.
+
+        Args:
+            pdf_repo: The PDF repository implementation.
+            settings: The application settings.
+            defer_parse_task: A callable to defer the PDF parsing task.
+        """
         self.pdf_repo = pdf_repo
         self.settings = settings
         self.defer_parse_task = defer_parse_task
 
     async def upload_pdf(self, current_user_id: int, file: UploadFile) -> PDFMetadataResponse:
+        """Handles the upload of a PDF file, saves the binary content and metadata.
+
+        Args:
+            current_user_id: The ID of the current authenticated user.
+            file: The uploaded PDF file.
+
+        Returns:
+            A PDFMetadataResponse containing the metadata of the newly uploaded PDF.
+
+        Raises:
+            InvalidPDFFileTypeError: If the uploaded file is not a PDF.
+        """
         if file.content_type != "application/pdf":
             raise InvalidPDFFileTypeError(provided_type=str(file.content_type))
 
@@ -64,6 +83,16 @@ class PDFApplicationService:
     async def list_pdfs_for_user(
         self, current_user_id: int, page: int, size: int
     ) -> PaginatedPDFListResponse:
+        """Retrieves a paginated list of PDF metadata for a specific user.
+
+        Args:
+            current_user_id: The ID of the current authenticated user.
+            page: The page number for pagination.
+            size: The number of items per page.
+
+        Returns:
+            A PaginatedPDFListResponse containing the PDF metadata entries for the requested page.
+        """
         skip = (page - 1) * size
         pdf_docs_domain = await self.pdf_repo.get_all_pdf_meta_for_user(
             user_id=current_user_id, skip=skip, limit=size
@@ -85,6 +114,19 @@ class PDFApplicationService:
         current_user_id: int,
         pdf_id: str,
     ) -> PDFParseResponse:
+        """Initiates parsing for a specific PDF.
+
+        Args:
+            current_user_id: The ID of the current authenticated user.
+            pdf_id: The ID of the PDF document to parse.
+
+        Returns:
+            A PDFParseResponse indicating the status of the parsing request.
+
+        Raises:
+            PDFNotFoundError: If the PDF document is not found or not owned by the user.
+            PDFAlreadyParsingError: If the PDF is already being parsed or has been successfully parsed.
+        """
         pdf_doc = await self.pdf_repo.get_pdf_meta_by_id(pdf_id=pdf_id, user_id=current_user_id)
 
         if not pdf_doc:
@@ -94,7 +136,7 @@ class PDFApplicationService:
             pdf_doc.parse_status == PDFParseStatus.PARSING
             or pdf_doc.parse_status == PDFParseStatus.PARSED_SUCCESS
         ):
-            raise PDFAlreadyParsingError(pdf_id=pdf_id)
+            raise PDFAlreadyParsingError(pdf_id=pdf_doc.id)
 
         pdf_doc.mark_as_parsing()
         await self.pdf_repo.update_pdf_meta(pdf_doc)
@@ -110,6 +152,20 @@ class PDFApplicationService:
         current_user_id: int,
         pdf_id: str,
     ) -> PDFSelectResponse:
+        """Selects a specific PDF document for chat for the current user.
+
+        Args:
+            current_user_id: The ID of the current authenticated user.
+            pdf_id: The ID of the PDF document to select.
+
+        Returns:
+            A PDFSelectResponse indicating the success of the selection.
+
+        Raises:
+            PDFNotFoundError: If the PDF document is not found or not owned by the user.
+            PDFNotParsedError: If the PDF document has not been successfully parsed.
+            PDFDomainError: If there is an unexpected repository issue during selection.
+        """
         pdf_doc = await self.pdf_repo.get_pdf_meta_by_id(pdf_id=pdf_id, user_id=current_user_id)
 
         if not pdf_doc:
@@ -121,7 +177,7 @@ class PDFApplicationService:
             raise e
 
         success = await self.pdf_repo.set_pdf_selected_for_chat(
-            user_id=current_user_id, pdf_id_to_select=pdf_id
+            user_id=current_user_id, pdf_id_to_select=pdf_doc.id
         )
         if not success:
             raise PDFDomainError("Failed to select PDF for chat due to an unexpected repository issue.")

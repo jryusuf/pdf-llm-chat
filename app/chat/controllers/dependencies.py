@@ -29,8 +29,17 @@ async def _defer_llm_task(
     pdf_repo: IPDFRepository,
     settings: Settings,
 ):
-    """
-    Background task to defer LLM response generation using Google Gemini API via curl.
+    """Background task to defer LLM response generation using Google Gemini API via curl.
+
+    Retrieves the chat turn and associated parsed PDF text, calls the Gemini API,
+    and updates the chat turn with the LLM's response or an error.
+
+    Args:
+        chat_turn_id: The ID of the chat turn to process.
+        user_id: The ID of the user associated with the chat turn.
+        chat_repo: The chat repository instance.
+        pdf_repo: The PDF repository instance.
+        settings: The application settings containing API key and prompt.
     """
     chat_turn = None
     try:
@@ -183,12 +192,28 @@ async def _defer_llm_task(
 
 
 def get_chat_repository(session: AsyncSession = Depends(get_db_session)) -> IChatRepository:
+    """Provides a chat repository instance as a dependency.
+
+    Args:
+        session: The SQLAlchemy async session.
+
+    Returns:
+        An instance of the chat repository.
+    """
     return SQLAlchemyChatRepository(session=session)
 
 
 async def get_pdf_repository_for_chat_service(
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
 ) -> IPDFRepository:
+    """Provides a PDF repository instance for the chat service as a dependency.
+
+    Args:
+        db: The MongoDB database instance.
+
+    Returns:
+        An instance of the PDF repository.
+    """
     fs = AsyncIOMotorGridFSBucket(db, bucket_name="pdf_binaries")
     return MongoPDFRepository(db=db, fs=fs)
 
@@ -198,6 +223,16 @@ async def get_chat_application_service(
     pdf_repo: IPDFRepository = Depends(get_pdf_repository_for_chat_service),
     settings: Settings = Depends(get_settings),
 ) -> ChatApplicationService:
+    """Provides a chat application service instance as a dependency.
+
+    Args:
+        chat_repo: The chat repository instance.
+        pdf_repo: The PDF repository instance for the chat service.
+        settings: The application settings.
+
+    Returns:
+        An instance of the chat application service.
+    """
     async def actual_defer_llm_task(chat_turn_id: int, user_id: int):
         await _defer_llm_task(chat_turn_id, user_id, chat_repo, pdf_repo, settings)
 

@@ -31,6 +31,14 @@ class ChatApplicationService:
         settings: Settings,
         defer_llm_task: DeferLLMTaskType,
     ):
+        """Initializes the ChatApplicationService.
+
+        Args:
+            chat_repo: The chat repository implementation.
+            pdf_repo: The PDF repository implementation.
+            settings: The application settings.
+            defer_llm_task: A callable to defer the LLM processing task.
+        """
         self.chat_repo = chat_repo
         self.pdf_repo = pdf_repo
         self.settings = settings
@@ -39,6 +47,20 @@ class ChatApplicationService:
     async def submit_user_message(
         self, current_user_id: int, message_data: ChatMessageRequest
     ) -> ChatMessageTurnResponse:
+        """Submits a user's chat message, creates a chat turn, and defers an LLM processing task.
+
+        Args:
+            current_user_id: The ID of the current authenticated user.
+            message_data: The user's chat message request data.
+
+        Returns:
+            A ChatMessageTurnResponse representing the created chat turn with initial PENDING status.
+
+        Raises:
+            NoPDFSelectedForChatError: If no PDF is currently selected for the user.
+            PDFNotParsedForChatError: If the selected PDF has not been successfully parsed.
+            ChatDomainError: If there is an issue persisting the chat message before deferring the LLM task.
+        """
         selected_pdf_domain_obj: Optional[PDFDocument] = await self.pdf_repo.get_selected_pdf_for_user(
             user_id=current_user_id
         )
@@ -69,6 +91,16 @@ class ChatApplicationService:
     async def get_chat_history(
         self, current_user_id: int, page: int = 1, size: int = 20
     ) -> PaginatedChatHistoryResponse:
+        """Retrieves paginated chat history for a specific user.
+
+        Args:
+            current_user_id: The ID of the current authenticated user.
+            page: The page number for pagination (default is 1).
+            size: The number of items per page (default is 20).
+
+        Returns:
+            A PaginatedChatHistoryResponse containing the chat history entries for the requested page.
+        """
         skip = (page - 1) * size
         history_items_domain: List[ChatMessageTurn] = await self.chat_repo.get_chat_history_for_user(
             user_id=current_user_id, skip=skip, limit=size

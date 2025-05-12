@@ -23,10 +23,27 @@ from jose import jwt, JWTError
 
 class AccountApplicationService:
     def __init__(self, user_repo: IUserRepository, settings: Settings):
+        """Initializes the AccountApplicationService.
+
+        Args:
+            user_repo: The user repository implementation.
+            settings: The application settings.
+        """
         self.user_repo = user_repo
         self.settings = settings
 
     async def register_user(self, user_data: UserCreateRequest) -> UserRegisteredResponse:
+        """Registers a new user in the system.
+
+        Args:
+            user_data: The data for the new user, including email and password.
+
+        Returns:
+            A UserRegisteredResponse containing the new user's UUID and email.
+
+        Raises:
+            UserAlreadyExistsError: If a user with the provided email already exists.
+        """
         existing_user = await self.user_repo.get_by_email(user_data.email)
         if existing_user:
             raise UserAlreadyExistsError()
@@ -38,6 +55,17 @@ class AccountApplicationService:
         return UserRegisteredResponse(user_uuid=persisted_user.user_uuid, email=persisted_user.email)
 
     async def login_user(self, login_data: UserLoginRequest) -> TokenResponse:
+        """Authenticates a user and generates an access token upon successful login.
+
+        Args:
+            login_data: The login credentials, including email and password.
+
+        Returns:
+            A TokenResponse containing the access token and user UUID.
+
+        Raises:
+            InvalidCredentialsError: If the email or password is incorrect, or if the user is inactive.
+        """
         user_domain_obj = await self.user_repo.get_by_email(login_data.email)
 
         if not user_domain_obj or not user_domain_obj.verify_password(login_data.password):
@@ -52,9 +80,13 @@ class AccountApplicationService:
         return TokenResponse(access_token=access_token, user_uuid=user_domain_obj.user_uuid)
 
     async def get_user_by_uuid_for_auth(self, user_uuid_str: str) -> Optional[User]:
-        """
-        Service method specifically for the auth dependency to get a user.
-        Returns the domain User object.
+        """Retrieves an active user by their UUID, primarily for authentication purposes.
+
+        Args:
+            user_uuid_str: The string representation of the user's UUID.
+
+        Returns:
+            The User domain object if found and active, otherwise None.
         """
         try:
             user_uuid = uuid.UUID(user_uuid_str)

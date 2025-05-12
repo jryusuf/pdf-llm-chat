@@ -17,6 +17,14 @@ from loguru import logger
 
 
 async def get_repository_for_task() -> IPDFRepository:
+    """Placeholder function to get a PDF repository instance for background tasks.
+
+    Note:
+        This is a placeholder and needs to be implemented based on your Procrastinate and DI setup.
+
+    Returns:
+        An instance of the PDF repository.
+    """
     logger.warning(
         "get_repository_for_task is a placeholder and needs to be implemented "
         "based on your Procrastinate and DI setup."
@@ -27,6 +35,14 @@ async def get_repository_for_task() -> IPDFRepository:
 
 
 async def dummy_defer_parse_task(pdf_id: str, user_id: int):
+    """Dummy background task to parse a PDF document.
+
+    Retrieves the PDF binary, extracts text, saves the parsed text, and updates the PDF's status.
+
+    Args:
+        pdf_id: The ID of the PDF document to parse.
+        user_id: The ID of the user who owns the PDF.
+    """
     logger.info(f"Starting PDF parsing task for PDF ID: {pdf_id}, User ID: {user_id}")
     pdf_repo: IPDFRepository = await get_repository_for_task()
     pdf_doc: PDFDocument | None = None
@@ -94,6 +110,14 @@ async def dummy_defer_parse_task(pdf_id: str, user_id: int):
 
 
 async def get_pdf_repository(db: AsyncIOMotorDatabase = Depends(get_mongo_db)) -> IPDFRepository:
+    """Provides a PDF repository instance as a dependency.
+
+    Args:
+        db: The MongoDB database instance.
+
+    Returns:
+        An instance of the PDF repository.
+    """
     fs = AsyncIOMotorGridFSBucket(db)
     return MongoPDFRepository(db, fs)
 
@@ -101,6 +125,15 @@ async def get_pdf_repository(db: AsyncIOMotorDatabase = Depends(get_mongo_db)) -
 def get_pdf_application_service(
     pdf_repo: IPDFRepository = Depends(get_pdf_repository), settings: Settings = Depends(get_settings)
 ) -> PDFApplicationService:
+    """Provides a PDF application service instance as a dependency.
+
+    Args:
+        pdf_repo: The PDF repository instance.
+        settings: The application settings.
+
+    Returns:
+        An instance of the PDF application service.
+    """
     return PDFApplicationService(
         pdf_repo=pdf_repo, settings=settings, defer_parse_task=dummy_defer_parse_task
     )
