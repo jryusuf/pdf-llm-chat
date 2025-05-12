@@ -3,7 +3,6 @@ import uuid
 from datetime import datetime
 
 
-# --- User Registration ---
 class UserCreateRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, description="Password must be at least 8 characters long.")
@@ -15,7 +14,6 @@ class UserRegisteredResponse(BaseModel):
     message: str = "User registered successfully."
 
 
-# --- User Login ---
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -27,7 +25,6 @@ class TokenResponse(BaseModel):
     user_uuid: uuid.UUID
 
 
-# --- User Info (example for authenticated user context) ---
 class UserInDB(BaseModel):
     id: int
     user_uuid: uuid.UUID

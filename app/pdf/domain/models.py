@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional, Any  # Any for GridFS file reference initially
-import uuid  # If using UUIDs for PDF domain IDs, distinct from Mongo's ObjectId
+from typing import Optional, Any
+import uuid
 from app.pdf.domain.exceptions import PDFNotParsedError
 
 
@@ -63,7 +63,7 @@ class PDFDocument:
 
     def select_for_chat(self):
         if self.parse_status != PDFParseStatus.PARSED_SUCCESS:
-            raise PDFNotParsedError(pdf_id=self.id)  # From domain exceptions
+            raise PDFNotParsedError(pdf_id=self.id)
         self.is_selected_for_chat = True
 
     def deselect_for_chat(self):

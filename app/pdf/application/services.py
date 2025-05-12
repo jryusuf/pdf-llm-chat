@@ -1,4 +1,3 @@
-# app/pdf/application/services.py
 from fastapi import UploadFile
 import uuid
 from datetime import datetime, timezone
@@ -12,7 +11,7 @@ from app.pdf.domain.exceptions import (
     PDFAlreadyParsingError,
     PDFNotParsedError,
     InvalidPDFFileTypeError,
-    PDFDomainError,  # Explicitly import PDFDomainError
+    PDFDomainError,
 )
 from app.pdf.application.schemas import (
     PDFMetadataResponse,
@@ -23,7 +22,7 @@ from app.pdf.application.schemas import (
 
 from typing import Callable, Coroutine, Any
 
-DeferPDFParseTaskType = Callable[[str], Coroutine[Any, Any, None]]
+DeferPDFParseTaskType = Callable[[str, int], Coroutine[Any, Any, None]]
 
 
 class PDFApplicationService:
@@ -100,7 +99,7 @@ class PDFApplicationService:
         pdf_doc.mark_as_parsing()
         await self.pdf_repo.update_pdf_meta(pdf_doc)
 
-        await self.defer_parse_task(pdf_doc.id)
+        await self.defer_parse_task(pdf_doc.id, current_user_id)
 
         return PDFParseResponse(
             pdf_id=pdf_doc.id, status=pdf_doc.parse_status, message="PDF parsing initiated."

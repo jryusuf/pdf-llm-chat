@@ -131,7 +131,7 @@ def step_impl(context):
     Sends a POST request to the /pdf-chat endpoint with the chat message.
     """
     request_body = {"message": context.chat_message_content}
-    context.response = context.client.post("/chat/pdf-chat", json=request_body)
+    context.response = context.client.post("/pdf-chat", json=request_body)
 
 
 @then("the system saves the user message and an LLM placeholder in chat history with status PENDING")
@@ -417,7 +417,7 @@ def step_impl(context):
     """
     Sends a GET request to the /chat-history endpoint.
     """
-    context.response = context.client.get("/chat/chat-history")
+    context.response = context.client.get("/chat-history")
 
 
 @then("the response contains a paginated list of chat history entries")
@@ -541,7 +541,7 @@ def step_impl(context):
     """
     page = 2
     size = 10
-    context.response = context.client.get(f"/chat/chat-history?page={page}&size={size}")
+    context.response = context.client.get(f"/chat-history?page={page}&size={size}")
 
     # Store the requested page and size for later assertions
     context.requested_page = page

@@ -1,0 +1,14 @@
+# Include production requirements
+-r requirements.txt
+
+# Testing Dependencies
+pytest>=8.3.5
+pytest-cov>=4.0.0 # For test coverage
+httpx>=0.28.1 # For testing API clients
+behave>=1.2.6 # For BDD tests
+mongomock>=4.3.0 # For mocking MongoDB in tests
+aiosqlite>=0.20.0 # For potentially testing DB interactions without full Postgres
+
+# Development Tools
+pre-commit>=4.2.0 # For git hooks
+ruff>=0.11.9 # For linting/formatting

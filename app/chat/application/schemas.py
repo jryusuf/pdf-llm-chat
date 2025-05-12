@@ -9,13 +9,13 @@ class ChatMessageRequest(BaseModel):
 
 
 class ChatMessageTurnResponse(BaseModel):
-    id: int  # Changed back to int
-    user_id: int
+    id: int
+    user_id: str  # Reverted back to str from int
     pdf_document_id: str
     pdf_original_filename: str
     user_message_content: str
     user_message_timestamp: datetime
-    llm_response_content: Optional[str]  # Inferred from service logic
+    llm_response_content: Optional[str]
     llm_response_status: LLMResponseStatus
     llm_response_timestamp: Optional[datetime]
 

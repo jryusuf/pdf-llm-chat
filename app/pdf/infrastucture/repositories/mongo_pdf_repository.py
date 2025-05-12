@@ -7,14 +7,15 @@ from app.pdf.domain.exceptions import PDFNotFoundError
 import io
 from typing import Optional, Any, List
 from datetime import datetime, timezone
+from loguru import logger
 
 
 class MongoPDFRepository(IPDFRepository):
-    def __init__(self, db: AsyncIOMotorDatabase, fs: Optional[AsyncIOMotorGridFSBucket] = None):
+    def __init__(self, db: AsyncIOMotorDatabase, fs: AsyncIOMotorGridFSBucket):
         self.db = db
         self.pdf_meta_collection = db["pdf_metadata_collection"]
         self.parsed_texts_collection = db["parsed_pdf_texts_collection"]
-        self.fs = fs if fs else AsyncIOMotorGridFSBucket(db, bucket_name="pdf_binaries")
+        self.fs = fs
 
     async def _doc_to_domain(self, doc: dict) -> Optional[PDFDocument]:
         if not doc:
@@ -24,7 +25,7 @@ class MongoPDFRepository(IPDFRepository):
             user_id=doc["user_id"],
             gridfs_file_id=str(doc["gridfs_file_id"]),
             original_filename=doc["original_filename"],
-            upload_date=doc.get("upload_date"),  # Allow for missing if schema evolves
+            upload_date=doc.get("upload_date"),
             parse_status=PDFParseStatus(doc.get("parse_status", "UNPARSED")),
             parse_error_message=doc.get("parse_error_message"),
             is_selected_for_chat=doc.get("is_selected_for_chat", False),
@@ -36,15 +37,12 @@ class MongoPDFRepository(IPDFRepository):
     ) -> str:
         gridfs_id = await self.fs.upload_from_stream(
             filename,
-            io.BytesIO(content),  # GridFS expects a stream-like object
+            io.BytesIO(content),
             metadata={"contentType": content_type, "user_id": user_id},
         )
         return str(gridfs_id)
 
     async def save_pdf_meta(self, pdf_doc: PDFDocument) -> PDFDocument:
-        # MongoDB generates _id, so we don't pass pdf_doc.id directly for insert
-        # But if pdf_doc.id was pre-generated (e.g. UUID string), we could use it as _id.
-        # For this example, assume Mongo generates ObjectId.
         meta_doc = {
             "user_id": pdf_doc.user_id,
             "gridfs_file_id": ObjectId(pdf_doc.gridfs_file_id),
@@ -56,7 +54,7 @@ class MongoPDFRepository(IPDFRepository):
             "parsed_text_id": ObjectId(pdf_doc.parsed_text_id) if pdf_doc.parsed_text_id else None,
         }
         result = await self.pdf_meta_collection.insert_one(meta_doc)
-        pdf_doc.id = str(result.inserted_id)  # Update domain object with generated ID
+        pdf_doc.id = str(result.inserted_id)
         return pdf_doc
 
     async def get_pdf_meta_by_id(self, pdf_id: str, user_id: int) -> Optional[PDFDocument]:
@@ -69,12 +67,12 @@ class MongoPDFRepository(IPDFRepository):
 
     async def get_pdf_binary_stream_by_gridfs_id(
         self, gridfs_id: str
-    ) -> Optional[AsyncIOMotorGridFSBucket]:  # Actually returns GridOut object for streaming
+    ) -> Optional[AsyncIOMotorGridFSBucket]:
         try:
             obj_id = ObjectId(gridfs_id)
             grid_out = await self.fs.open_download_stream(obj_id)
-            return grid_out  # Caller needs to read() from this
-        except Exception:  # e.g. NoFile
+            return grid_out
+        except Exception:
             return None
 
     async def get_all_pdf_meta_for_user(
@@ -100,40 +98,37 @@ class MongoPDFRepository(IPDFRepository):
         try:
             obj_id = ObjectId(pdf_doc.id)
         except Exception:
-            raise PDFNotFoundError(pdf_id=pdf_doc.id)  # Or appropriate error
+            raise PDFNotFoundError(pdf_id=pdf_doc.id)
 
         update_data = {
             "parse_status": pdf_doc.parse_status.value,
             "parse_error_message": pdf_doc.parse_error_message,
             "is_selected_for_chat": pdf_doc.is_selected_for_chat,
             "parsed_text_id": ObjectId(pdf_doc.parsed_text_id) if pdf_doc.parsed_text_id else None,
-            "upload_date": pdf_doc.upload_date,  # Potentially update this too if needed
+            "upload_date": pdf_doc.upload_date,
         }
         result = await self.pdf_meta_collection.update_one(
             {"_id": obj_id, "user_id": pdf_doc.user_id}, {"$set": update_data}
         )
         if result.matched_count == 0:
-            raise PDFNotFoundError(pdf_id=pdf_doc.id)  # Or PDFNotOwned if user_id check fails
-        return pdf_doc  # Return the updated domain object passed in
+            raise PDFNotFoundError(pdf_id=pdf_doc.id)
+        return pdf_doc
 
     async def set_pdf_selected_for_chat(self, user_id: int, pdf_id_to_select: str) -> bool:
         try:
             select_obj_id = ObjectId(pdf_id_to_select)
         except Exception:
-            return False  # Invalid pdf_id format
+            return False
 
-        # Deselect all others for this user
-        await self.pdf_meta_collection.update_many(
+        deselect_result = await self.pdf_meta_collection.update_many(
             {"user_id": user_id, "is_selected_for_chat": True, "_id": {"$ne": select_obj_id}},
             {"$set": {"is_selected_for_chat": False}},
         )
-        # Select the target one
-        result = await self.pdf_meta_collection.update_one(
+
+        select_result = await self.pdf_meta_collection.update_one(
             {"_id": select_obj_id, "user_id": user_id}, {"$set": {"is_selected_for_chat": True}}
         )
-        return (
-            result.modified_count > 0 or result.matched_count > 0
-        )  # True if already selected or newly selected
+        return select_result.modified_count > 0 or select_result.matched_count > 0
 
     async def save_parsed_text(self, pdf_meta_id: str, text_content: str) -> str:
         parsed_text_doc = {
@@ -151,3 +146,13 @@ class MongoPDFRepository(IPDFRepository):
             return None
         doc = await self.parsed_texts_collection.find_one({"pdf_metadata_id": obj_id})
         return doc["text_content"] if doc else None
+
+    async def get_selected_pdf_for_user(self, user_id: int) -> Optional[PDFDocument]:
+        logger.debug(f"Attempting to get selected PDF for user_id: {user_id}")
+        doc = await self.pdf_meta_collection.find_one({"user_id": user_id, "is_selected_for_chat": True})
+        if doc:
+            logger.debug(f"Selected PDF found for user_id: {user_id}, PDF ID: {str(doc['_id'])}")
+            return await self._doc_to_domain(doc)
+        else:
+            logger.debug(f"No PDF selected for chat found for user_id: {user_id}")
+            return None

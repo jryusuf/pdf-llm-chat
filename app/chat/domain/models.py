@@ -11,7 +11,7 @@ class MessageSenderType(str, Enum):
 
 class LLMResponseStatus(str, Enum):
     PENDING = "PENDING"
-    PROCESSING = "PROCESSING"  # If Procrastinate task picks it up
+    PROCESSING = "PROCESSING"
     COMPLETED_SUCCESS = "COMPLETED_SUCCESS"
     FAILED_RETRIES_EXHAUSTED = "FAILED_RETRIES_EXHAUSTED"
 
@@ -19,7 +19,7 @@ class LLMResponseStatus(str, Enum):
 class ChatMessageTurn:
     id: Optional[int]
     user_id: int
-    pdf_document_id: str  # MongoDB ObjectID of the PDF
+    pdf_document_id: str
     pdf_original_filename: str
 
     user_message_content: str

@@ -75,7 +75,7 @@ async def test_create_chat_turn(
     retrieved_turn = await chat_repository.get_chat_turn_by_id(created_turn.id, created_turn.user_id)
     assert retrieved_turn is not None
     assert retrieved_turn.id == created_turn.id
-    assert retrieved_turn.user_id == created_turn.user_id
+    assert retrieved_turn.user_id == str(created_turn.user_id)
     assert retrieved_turn.pdf_document_id == retrieved_turn.pdf_document_id
     assert retrieved_turn.pdf_original_filename == retrieved_turn.pdf_original_filename
     assert retrieved_turn.user_message_content == retrieved_turn.user_message_content
@@ -91,7 +91,7 @@ async def test_get_chat_turn_by_id(
 
     assert retrieved_turn is not None
     assert retrieved_turn.id == created_turn.id
-    assert retrieved_turn.user_id == created_turn.user_id
+    assert retrieved_turn.user_id == str(created_turn.user_id)
     assert retrieved_turn.pdf_document_id == created_turn.pdf_document_id
     assert retrieved_turn.pdf_original_filename == created_turn.pdf_original_filename
     assert retrieved_turn.user_message_content == created_turn.user_message_content

@@ -3,19 +3,19 @@ from sqlalchemy.future import select
 from sqlalchemy import func, desc, asc
 from app.chat.domain.models import ChatMessageTurn, LLMResponseStatus
 from app.chat.infrastructure.repositories.chat_repository import IChatRepository
-from sqlalchemy.orm import Mapped, mapped_column, declarative_base
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Boolean, DateTime, Integer, Text, Enum as DBEnum, ForeignKey
 from datetime import datetime, timezone
 from typing import Optional, List
 
-Base = declarative_base()
+from app.account.infrastructure.repositories.sqlalchemy_user_repository import Base
 
 
 class ChatLogDB(Base):
     __tablename__ = "chat_logs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(Integer, index=True)
-    pdf_document_id: Mapped[str] = mapped_column(Text, index=True)  # Store Mongo ObjectID as string
+    user_id: Mapped[str] = mapped_column(String(255), index=True)
+    pdf_document_id: Mapped[str] = mapped_column(Text, index=True)
     pdf_original_filename: Mapped[str] = mapped_column(String(255))
     user_message_content: Mapped[str] = mapped_column(Text)
     user_message_timestamp: Mapped[datetime] = mapped_column(
@@ -49,13 +49,13 @@ class SQLAlchemyChatRepository(IChatRepository):
             pdf_original_filename=chat_turn.pdf_original_filename,
             user_message_content=chat_turn.user_message_content,
             user_message_timestamp=chat_turn.user_message_timestamp,
-            llm_response_status=LLMResponseStatus.PENDING,  # Initial state
+            llm_response_status=LLMResponseStatus.PENDING,
         )
         self.session.add(db_chat_log)
         await self.session.commit()
         await self.session.refresh(db_chat_log)
 
-        chat_turn.id = db_chat_log.id  # Update domain model with DB ID
+        chat_turn.id = db_chat_log.id
         chat_turn.llm_response_status = db_chat_log.llm_response_status
         return chat_turn
 
@@ -84,7 +84,12 @@ class SQLAlchemyChatRepository(IChatRepository):
         result = await self.session.execute(stmt)
         db_log = result.scalar_one_or_none()
         if not db_log:
-            raise Exception(f"Chat log with ID {chat_turn.id} not found for update.")  # Or custom exception
+            raise Exception(f"Chat log with ID {chat_turn.id} not found for update.")
+
+        db_log.llm_response_content = chat_turn.llm_response_content
+        db_log.llm_response_status = chat_turn.llm_response_status
+        db_log.llm_response_timestamp = chat_turn.llm_response_timestamp
+        db_log.retry_attempts = chat_turn.retry_attempts
 
         db_log.llm_response_content = chat_turn.llm_response_content
         db_log.llm_response_status = chat_turn.llm_response_status
@@ -102,7 +107,7 @@ class SQLAlchemyChatRepository(IChatRepository):
         stmt = (
             select(ChatLogDB)
             .where(ChatLogDB.user_id == user_id)
-            .order_by(desc(ChatLogDB.user_message_timestamp), desc(ChatLogDB.id))  # Ensure stable sort
+            .order_by(desc(ChatLogDB.user_message_timestamp), desc(ChatLogDB.id))
             .offset(skip)
             .limit(limit)
         )
@@ -128,4 +133,5 @@ class SQLAlchemyChatRepository(IChatRepository):
     async def count_chat_history_for_user(self, user_id: int) -> int:
         stmt = select(func.count(ChatLogDB.id)).where(ChatLogDB.user_id == user_id)
         result = await self.session.execute(stmt)
-        return result.scalar_one()
+        count = result.scalar_one()
+        return count

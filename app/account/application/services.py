@@ -66,3 +66,4 @@ class AccountApplicationService:
             return user
         if user and not user.is_active:
             return None
+        return None

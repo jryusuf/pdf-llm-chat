@@ -5,8 +5,8 @@ from app.pdf.domain.models import PDFParseStatus
 
 
 class PDFMetadataResponse(BaseModel):
-    id: str  # Mongo ObjectId as string
-    user_id: int
+    id: str
+    user_id: str
     original_filename: str
     upload_date: datetime
     parse_status: PDFParseStatus
@@ -25,17 +25,17 @@ class PaginatedPDFListResponse(BaseModel):
 
 
 class PDFParseRequest(BaseModel):
-    pdf_id: str  # Mongo ObjectId as string
+    pdf_id: str
 
 
 class PDFParseResponse(BaseModel):
     pdf_id: str
-    status: PDFParseStatus  # e.g., "PARSING"
+    status: PDFParseStatus
     message: str
 
 
 class PDFSelectRequest(BaseModel):
-    pdf_id: str  # Mongo ObjectId as string
+    pdf_id: str
 
 
 class PDFSelectResponse(BaseModel):

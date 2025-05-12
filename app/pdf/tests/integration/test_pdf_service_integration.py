@@ -112,12 +112,15 @@ class MockPDFRepository(IPDFRepository):
 
 
 # Mock implementation for the defer_parse_task callable
+# Mock implementation for the defer_parse_task callable
 class MockDeferParseTask:
     def __init__(self):
         self.called_with_pdf_id = None
+        self.called_with_user_id = None  # Added to potentially track user_id
 
-    async def __call__(self, pdf_id: str):
+    async def __call__(self, pdf_id: str, user_id: int):  # Added user_id parameter
         self.called_with_pdf_id = pdf_id
+        self.called_with_user_id = user_id  # Store user_id
         # In a real scenario, this would defer a task, e.g., to a worker queue.
         # For testing, we just record that it was called.
 
@@ -150,7 +153,7 @@ class TestPDFApplicationService:
         # Test case: Successfully upload a valid PDF file.
         # Expected: Repository methods are called, returns correct PDFMetadataResponse.
 
-        user_id = 123
+        user_id = "123"
         file_content = b"%PDF-1.4\n...\n%%EOF"  # Minimal valid PDF content
         # Use MagicMock to create a mock UploadFile object
         file = MagicMock(spec=UploadFile)
@@ -240,7 +243,7 @@ class TestPDFApplicationService:
         assert response.data == []
 
     async def test_list_pdfs_for_user_with_pdfs(self, pdf_service, mock_pdf_repo):
-        user_id = 789
+        user_id = "789"
         # Add some mock PDF documents to the repository
         pdf_docs_to_add = []
         for i in range(15):

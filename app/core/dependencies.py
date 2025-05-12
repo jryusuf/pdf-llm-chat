@@ -1,15 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from app.account.infrastructure.repositories.sqlalchemy_user_repository import (
     Base,
-)  # Assuming Base is defined here or imported
+)
+from app.core.config import get_settings
 
-# Define the database URL for SQLite
-DATABASE_URL = "sqlite+aiosqlite:///./sql_app.db"  # Using a file-based SQLite DB
+settings = get_settings()
 
-# Create an asynchronous engine
-async_engine = create_async_engine(DATABASE_URL, echo=True)
+async_engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
-# Create an asynchronous session maker
 AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -21,8 +19,3 @@ async def get_db_session() -> AsyncSession:
     """
     async with AsyncSessionLocal() as session:
         yield session
-
-
-# Note: You will need to create the database tables on application startup.
-# This can be done by importing Base and running Base.metadata.create_all(async_engine)
-# within an asynchronous context during your application's startup event.

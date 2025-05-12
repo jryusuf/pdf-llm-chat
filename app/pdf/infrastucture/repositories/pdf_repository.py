@@ -42,3 +42,7 @@ class IPDFRepository(Protocol):
 
     async def get_parsed_text_by_pdf_meta_id(self, pdf_meta_id: str) -> Optional[str]:
         ...
+
+    async def get_selected_pdf_for_user(self, user_id: int) -> Optional[PDFDocument]:
+        """Retrieves the PDF document currently selected for chat by the user."""
+        ...

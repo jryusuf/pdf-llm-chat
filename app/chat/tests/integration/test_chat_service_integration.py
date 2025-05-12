@@ -119,9 +119,9 @@ class MockSettings(Settings):
 
 
 # Mock defer_llm_task
-async def mock_defer_llm_task(chat_turn_id: int):
+async def mock_defer_llm_task(chat_turn_id: int, user_id: int):  # Added user_id parameter
     # This mock function does nothing, or could record calls for assertion
-    print(f"Mock defer_llm_task called for chat_turn_id: {chat_turn_id}")
+    print(f"Mock defer_llm_task called for chat_turn_id: {chat_turn_id}, user_id: {user_id}")
     pass  # Simulate deferring the task
 
 
@@ -153,7 +153,7 @@ def chat_service():
 @pytest.mark.asyncio
 async def test_submit_user_message_success(chat_service):
     # Setup: Create a user and a selected, parsed PDF in the mock PDF repo
-    user_id = 123
+    user_id = "123"
     pdf_id = "pdf_abc"
     selected_pdf = PDFDocument(
         id=pdf_id,
@@ -191,16 +191,18 @@ async def test_submit_user_message_success(chat_service):
     assert persisted_turn.llm_response_status == LLMResponseStatus.PENDING
 
     # 3. Check if the background task was deferred
+    # 3. Check if the background task was deferred
     chat_service.defer_llm_task.assert_called_once_with(
-        int(response.id)
-    )  # Assuming ID is int in defer_llm_task
+        response.id,
+        user_id,  # Pass both arguments to the assertion
+    )
 
 
 # test_submit_user_message_no_pdf_selected
 @pytest.mark.asyncio
 async def test_submit_user_message_no_pdf_selected(chat_service):
     # Setup: Ensure no PDF is selected for the user in the mock PDF repo
-    user_id = 456
+    user_id = "456"
     # The default state of MockPDFRepository is no PDFs, so no explicit setup needed here
     # unless we had added PDFs in a previous test run within the same fixture scope (not the case here)
 
@@ -220,7 +222,7 @@ async def test_submit_user_message_no_pdf_selected(chat_service):
 @pytest.mark.asyncio
 async def test_submit_user_message_pdf_not_parsed(chat_service):
     # Setup: Create a user and a selected, but not parsed, PDF in the mock PDF repo
-    user_id = 789
+    user_id = "789"
     pdf_id = "pdf_def"
     selected_pdf = PDFDocument(
         id=pdf_id,
@@ -253,7 +255,7 @@ async def test_submit_user_message_pdf_not_parsed(chat_service):
 @pytest.mark.asyncio
 async def test_submit_user_message_repo_create_fails(chat_service):
     # Setup: Create a user and a selected, parsed PDF in the mock PDF repo
-    user_id = 1011
+    user_id = "1011"  # Reverted back to string
     pdf_id = "pdf_ghi"
     selected_pdf = PDFDocument(
         id=pdf_id,
@@ -301,7 +303,7 @@ async def test_submit_user_message_repo_create_fails(chat_service):
 @pytest.mark.asyncio
 async def test_get_chat_history_success(chat_service):
     # Setup: Add some chat turns for a user to the mock chat repo
-    user_id = 2022
+    user_id = "2022"  # Reverted back to string
     pdf_id = "pdf_jkl"
     turn1 = ChatMessageTurn(
         user_id=user_id,
@@ -370,7 +372,7 @@ async def test_get_chat_history_success(chat_service):
 @pytest.mark.asyncio
 async def test_get_chat_history_pagination(chat_service):
     # Setup: Add many chat turns for a user to the mock chat repo
-    user_id = 3033
+    user_id = "3033"  # Reverted back to string
     pdf_id = "pdf_mno"
     num_turns = 25
     turns = []
