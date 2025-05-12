@@ -45,12 +45,12 @@ async def add_mock_chat_history(context, user_id, pdf_document_id, pdf_original_
     base_time = datetime.now(timezone.utc)
     for i in range(num_entries):
         chat_turn = ChatMessageTurn(
-            id=f"chat_turn_{i+1}",
+            id=f"chat_turn_{i + 1}",
             user_id=user_id,
             pdf_document_id=pdf_document_id,
             pdf_original_filename=pdf_original_filename,
-            user_message_content=f"User message {i+1}",
-            llm_response_content=f"LLM response {i+1}",
+            user_message_content=f"User message {i + 1}",
+            llm_response_content=f"LLM response {i + 1}",
             llm_response_status=LLMResponseStatus.COMPLETED_SUCCESS,
             user_message_timestamp=base_time
             - timedelta(seconds=num_entries - 1 - i),  # Ensure descending order by timestamp
@@ -79,9 +79,9 @@ def step_impl(context):
     """
     Verifies that the HTTP response status code is 202.
     """
-    assert (
-        context.response.status_code == 202
-    ), f"Expected status code 202, but got {context.response.status_code}"
+    assert context.response.status_code == 202, (
+        f"Expected status code 202, but got {context.response.status_code}"
+    )
 
 
 @then("the system returns an HTTP 200 OK response")
@@ -89,9 +89,9 @@ def step_impl(context):
     """
     Verifies that the HTTP response status code is 200.
     """
-    assert (
-        context.response.status_code == 200
-    ), f"Expected status code 200, but got {context.response.status_code}"
+    assert context.response.status_code == 200, (
+        f"Expected status code 200, but got {context.response.status_code}"
+    )
 
 
 # --- End New Step Definitions ---
@@ -156,38 +156,38 @@ def step_impl(context):
 
     # Verify that chat_repo.save_chat_turn was called exactly once
     # We check the method_calls list on the mock object
-    assert (
-        len(context.chat_repo.method_calls) == 1
-    ), f"Expected 1 call to chat_repo methods, but got {len(context.chat_repo.method_calls)}"
+    assert len(context.chat_repo.method_calls) == 1, (
+        f"Expected 1 call to chat_repo methods, but got {len(context.chat_repo.method_calls)}"
+    )
     call_name, call_args, call_kwargs = context.chat_repo.method_calls[0]
 
     assert call_name == "save_chat_turn", f"Expected call to 'save_chat_turn', but got '{call_name}'"
-    assert (
-        len(call_args) == 1
-    ), f"Expected save_chat_turn to be called with 1 argument, but got {len(call_args)}"
+    assert len(call_args) == 1, (
+        f"Expected save_chat_turn to be called with 1 argument, but got {len(call_args)}"
+    )
 
     saved_chat_turn = call_args[0]
 
-    assert isinstance(
-        saved_chat_turn, ChatMessageTurn
-    ), f"Expected argument to be ChatMessageTurn, but got {type(saved_chat_turn)}"
+    assert isinstance(saved_chat_turn, ChatMessageTurn), (
+        f"Expected argument to be ChatMessageTurn, but got {type(saved_chat_turn)}"
+    )
 
     assert saved_chat_turn.user_id == context.user_id, "Saved chat turn has incorrect user ID."
-    assert (
-        saved_chat_turn.pdf_document_id == context.selected_pdf_id
-    ), "Saved chat turn has incorrect PDF ID."
-    assert (
-        saved_chat_turn.user_message_content == context.chat_message_content
-    ), "Saved user message content is incorrect."
-    assert (
-        saved_chat_turn.llm_response_content is None
-    ), "Saved LLM response content should be None initially."
-    assert (
-        saved_chat_turn.llm_response_status == LLMResponseStatus.PENDING
-    ), "Saved LLM response status should be PENDING."
-    assert (
-        saved_chat_turn.pdf_original_filename == context.selected_pdf_filename
-    ), "Saved chat turn has incorrect PDF filename."
+    assert saved_chat_turn.pdf_document_id == context.selected_pdf_id, (
+        "Saved chat turn has incorrect PDF ID."
+    )
+    assert saved_chat_turn.user_message_content == context.chat_message_content, (
+        "Saved user message content is incorrect."
+    )
+    assert saved_chat_turn.llm_response_content is None, (
+        "Saved LLM response content should be None initially."
+    )
+    assert saved_chat_turn.llm_response_status == LLMResponseStatus.PENDING, (
+        "Saved LLM response status should be PENDING."
+    )
+    assert saved_chat_turn.pdf_original_filename == context.selected_pdf_filename, (
+        "Saved chat turn has incorrect PDF filename."
+    )
 
     # Store the ID of the newly created chat turn for later steps if needed
     # The mock service creates the ChatMessageTurn, so we get the ID from there
@@ -218,18 +218,18 @@ def step_impl(context):
     except Exception as e:
         assert False, f"Response body does not match ChatMessageTurnResponse schema: {e}"
 
-    assert (
-        response_body.get("user_message_content") == context.chat_message_content
-    ), "Response user message content is incorrect."
-    assert (
-        response_body.get("llm_response_content") is None
-    ), "Response LLM response content should be None."
-    assert (
-        response_body.get("llm_response_status") == LLMResponseStatus.PENDING.value
-    ), "Response LLM status should be PENDING."
-    assert (
-        response_body.get("pdf_original_filename") == context.selected_pdf_filename
-    ), "Response PDF filename is incorrect."
+    assert response_body.get("user_message_content") == context.chat_message_content, (
+        "Response user message content is incorrect."
+    )
+    assert response_body.get("llm_response_content") is None, (
+        "Response LLM response content should be None."
+    )
+    assert response_body.get("llm_response_status") == LLMResponseStatus.PENDING.value, (
+        "Response LLM status should be PENDING."
+    )
+    assert response_body.get("pdf_original_filename") == context.selected_pdf_filename, (
+        "Response PDF filename is incorrect."
+    )
     # Check if the response ID matches the newly created turn ID
     # The mock service returns a fixed ID (1), so we check against that
     assert response_body.get("id") == 1, "Response ID does not match the expected mock ID (1)."
@@ -258,9 +258,9 @@ def step_impl(context):
     """
     Verifies that the HTTP response status code is 400.
     """
-    assert (
-        context.response.status_code == 400
-    ), f"Expected status code 400, but got {context.response.status_code}"
+    assert context.response.status_code == 400, (
+        f"Expected status code 400, but got {context.response.status_code}"
+    )
 
 
 @then("the response indicates that no PDF is selected for chat")
@@ -271,9 +271,9 @@ def step_impl(context):
     response_body = context.response.json()
     assert isinstance(response_body, dict), "Response body is not a dictionary."
     assert "detail" in response_body, "Response body does not contain 'detail'."
-    assert (
-        "No PDF selected for chat" in response_body["detail"]
-    ), f"Expected error message 'No PDF selected for chat', but got '{response_body['detail']}'"
+    assert "No PDF selected for chat" in response_body["detail"], (
+        f"Expected error message 'No PDF selected for chat', but got '{response_body['detail']}'"
+    )
 
 
 # Scenario: Attempt to initiate chat interaction when the selected PDF is not parsed
@@ -326,9 +326,9 @@ def step_impl(context):
     """
     Verifies that the HTTP response status code is 409.
     """
-    assert (
-        context.response.status_code == 409
-    ), f"Expected status code 409, but got {context.response.status_code}"
+    assert context.response.status_code == 409, (
+        f"Expected status code 409, but got {context.response.status_code}"
+    )
 
 
 @then("the response indicates that the selected PDF is not parsed")
@@ -340,9 +340,9 @@ def step_impl(context):
     assert isinstance(response_body, dict), "Response body is not a dictionary."
     assert "detail" in response_body, "Response body does not contain 'detail'."
     # The exact error message might vary, check for a substring
-    assert (
-        "PDF not parsed for chat" in response_body["detail"]
-    ), f"Expected error message containing 'PDF not parsed for chat', but got '{response_body['detail']}'"
+    assert "PDF not parsed for chat" in response_body["detail"], (
+        f"Expected error message containing 'PDF not parsed for chat', but got '{response_body['detail']}'"
+    )
 
 
 # Scenario: Attempt to initiate chat interaction when the selected PDF is not found
@@ -362,9 +362,9 @@ def step_impl(context):
     """
     Verifies that the HTTP response status code is 404.
     """
-    assert (
-        context.response.status_code == 404
-    ), f"Expected status code 404, but got {context.response.status_code}"
+    assert context.response.status_code == 404, (
+        f"Expected status code 404, but got {context.response.status_code}"
+    )
 
 
 @then("the response indicates that the selected PDF was not found")
@@ -376,7 +376,7 @@ def step_impl(context):
     assert isinstance(response_body, dict), "Response body is not a dictionary."
     assert "detail" in response_body, "Response body does not contain 'detail'."
     assert "Selected PDF for chat not found" in response_body["detail"], f"""Expected error message
-    containing 'Selected PDF for chat not found', but got '{response_body['detail']}'"""
+    containing 'Selected PDF for chat not found', but got '{response_body["detail"]}'"""
 
 
 # Scenario: Successfully retrieve paginated chat history
@@ -459,9 +459,9 @@ def step_impl(context):
     # Check if the list of timestamps is sorted in descending order
     is_sorted_descending = all(timestamps[i] >= timestamps[i + 1] for i in range(len(timestamps) - 1))
 
-    assert (
-        is_sorted_descending
-    ), "Chat history entries in the response are not ordered by timestamp descending."
+    assert is_sorted_descending, (
+        "Chat history entries in the response are not ordered by timestamp descending."
+    )
 
 
 # Scenario: Retrieve chat history when no entries exist for the user

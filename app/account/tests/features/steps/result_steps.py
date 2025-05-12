@@ -24,9 +24,9 @@ def step_impl(context):
     user_repo = SQLAlchemyUserRepository(session)
     user_domain = context.loop.run_until_complete(user_repo.get_by_email(context.user_data["email"]))
 
-    assert (
-        user_domain is not None
-    ), f"User with email {context.user_data['email']} was not found in the database."
+    assert user_domain is not None, (
+        f"User with email {context.user_data['email']} was not found in the database."
+    )
     context.created_user_id = str(user_domain.user_uuid)  # Store user uuid as string
 
 
@@ -51,9 +51,9 @@ def step_impl(context):
     Verifies that the HTTP response status code is 201.
     Assumes the response is stored in context.response by a When step.
     """
-    assert (
-        context.response.status_code == 201
-    ), f"Expected status code 201, but got {context.response.status_code}"
+    assert context.response.status_code == 201, (
+        f"Expected status code 201, but got {context.response.status_code}"
+    )
 
 
 @then("the system verifies credentials")
@@ -80,14 +80,14 @@ def step_impl(context):
     Verifies that the HTTP response status code is 200 and the response body contains a JWT.
     Assumes the response is stored in context.response by a When step.
     """
-    assert (
-        context.response.status_code == 200
-    ), f"Expected status code 200, but got {context.response.status_code}"
+    assert context.response.status_code == 200, (
+        f"Expected status code 200, but got {context.response.status_code}"
+    )
     response_body = context.response.json()
     assert "access_token" in response_body, "Response body does not contain 'access_token'."
-    assert (
-        isinstance(response_body["access_token"], str) and len(response_body["access_token"]) > 0
-    ), "Access token is invalid."
+    assert isinstance(response_body["access_token"], str) and len(response_body["access_token"]) > 0, (
+        "Access token is invalid."
+    )
     assert "token_type" in response_body, "Response body does not contain 'token_type'."
     assert response_body["token_type"] == "bearer", "Token type is not 'bearer'."
 
@@ -98,9 +98,9 @@ def step_impl(context):
     Verifies that the HTTP response status code is 409.
     Assumes the response is stored in context.response by a When step.
     """
-    assert (
-        context.response.status_code == 409
-    ), f"Expected status code 409, but got {context.response.status_code}"
+    assert context.response.status_code == 409, (
+        f"Expected status code 409, but got {context.response.status_code}"
+    )
 
 
 @then("the system returns an HTTP 401 Unauthorized response")
@@ -109,9 +109,9 @@ def step_impl(context):
     Verifies that the HTTP response status code is 401.
     Assumes the response is stored in context.response by a When step.
     """
-    assert (
-        context.response.status_code == 401
-    ), f"Expected status code 401, but got {context.response.status_code}"
+    assert context.response.status_code == 401, (
+        f"Expected status code 401, but got {context.response.status_code}"
+    )
 
 
 @then("the system returns an HTTP 422 Request response")
@@ -121,6 +121,6 @@ def step_impl(context):
     Assumes the response is stored in context.response by a When step.
     """
     # The API returns 422 for invalid input, update assertion to match
-    assert (
-        context.response.status_code == 422
-    ), f"Expected status code 422, but got {context.response.status_code}"
+    assert context.response.status_code == 422, (
+        f"Expected status code 422, but got {context.response.status_code}"
+    )

@@ -80,12 +80,12 @@ def step_impl(context):
         context.pdf_repo.get_pdf_meta_by_id(pdf_id=context.unparsed_pdf_id, user_id=context.user_id)
     )
 
-    assert (
-        pdf_doc is not None
-    ), f"PDF metadata with ID {context.unparsed_pdf_id} not found in the repository."
-    assert (
-        pdf_doc.parse_status == PDFParseStatus.PARSING
-    ), f"Expected parse status PARSING, but got {pdf_doc.parse_status}"
+    assert pdf_doc is not None, (
+        f"PDF metadata with ID {context.unparsed_pdf_id} not found in the repository."
+    )
+    assert pdf_doc.parse_status == PDFParseStatus.PARSING, (
+        f"Expected parse status PARSING, but got {pdf_doc.parse_status}"
+    )
 
 
 @then("the system enqueues a PDF parsing task")
@@ -96,9 +96,9 @@ def step_impl(context):
     """
     # Ensure context.defer_parse_task and context.unparsed_pdf_id are available
     assert hasattr(context, "defer_parse_task"), "MockDeferParseTask not available in context."
-    assert isinstance(
-        context.defer_parse_task, MockDeferParseTask
-    ), "context.defer_parse_task is not a MockDeferParseTask instance."
+    assert isinstance(context.defer_parse_task, MockDeferParseTask), (
+        "context.defer_parse_task is not a MockDeferParseTask instance."
+    )
     assert hasattr(context, "unparsed_pdf_id"), "Unparsed PDF ID not found in context."
 
     # Check if the mock defer_parse_task was called with the correct PDF ID
@@ -114,9 +114,9 @@ def step_impl(context):
     Verifies that the HTTP response status code is 202.
     Assumes context.response is set up.
     """
-    assert (
-        context.response.status_code == 202
-    ), f"Expected status code 202, but got {context.response.status_code}"
+    assert context.response.status_code == 202, (
+        f"Expected status code 202, but got {context.response.status_code}"
+    )
 
 
 # Scenario: User observes successful PDF parsing status
@@ -166,9 +166,9 @@ def step_impl(context):
         context.pdf_repo.get_pdf_meta_by_id(pdf_id=context.pdf_id_to_observe, user_id=context.user_id)
     )
 
-    assert (
-        pdf_doc is not None
-    ), f"PDF metadata with ID {context.pdf_id_to_observe} not found in the repository."
+    assert pdf_doc is not None, (
+        f"PDF metadata with ID {context.pdf_id_to_observe} not found in the repository."
+    )
 
     # Update the parse status to PARSED_SUCCESS
     pdf_doc.parse_status = PDFParseStatus.PARSED_SUCCESS
@@ -187,9 +187,9 @@ def step_impl(context):
     # Find the PDF with the stored ID in the response data
     observed_pdf = next((item for item in data if item.get("id") == context.pdf_id_to_observe), None)
 
-    assert (
-        observed_pdf is not None
-    ), f"PDF with ID {context.pdf_id_to_observe} not found in the response list."
+    assert observed_pdf is not None, (
+        f"PDF with ID {context.pdf_id_to_observe} not found in the response list."
+    )
     assert observed_pdf.get("parse_status") == PDFParseStatus.PARSED_SUCCESS.value, (
         f"Expected parse status PARSED_SUCCESS for PDF {context.pdf_id_to_observe}, "
         f"but got {observed_pdf.get('parse_status')}"
@@ -216,9 +216,9 @@ def step_impl(context):
         context.pdf_repo.get_pdf_meta_by_id(pdf_id=context.pdf_id_to_observe, user_id=context.user_id)
     )
 
-    assert (
-        pdf_doc is not None
-    ), f"PDF metadata with ID {context.pdf_id_to_observe} not found in the repository."
+    assert pdf_doc is not None, (
+        f"PDF metadata with ID {context.pdf_id_to_observe} not found in the repository."
+    )
 
     # Update the parse status to PARSED_FAILURE and add an error message
     pdf_doc.parse_status = PDFParseStatus.PARSED_FAILURE
@@ -238,9 +238,9 @@ def step_impl(context):
     # Find the PDF with the stored ID in the response data
     observed_pdf = next((item for item in data if item.get("id") == context.pdf_id_to_observe), None)
 
-    assert (
-        observed_pdf is not None
-    ), f"PDF with ID {context.pdf_id_to_observe} not found in the response list."
+    assert observed_pdf is not None, (
+        f"PDF with ID {context.pdf_id_to_observe} not found in the response list."
+    )
     assert observed_pdf.get("parse_status") == PDFParseStatus.PARSED_FAILURE.value, (
         f"Expected parse status PARSED_FAILURE for PDF {context.pdf_id_to_observe}, "
         f"but got {observed_pdf.get('parse_status')}"
@@ -259,9 +259,9 @@ def step_impl(context):
     # Find the PDF with the stored ID in the response data
     observed_pdf = next((item for item in data if item.get("id") == context.pdf_id_to_observe), None)
 
-    assert (
-        observed_pdf is not None
-    ), f"PDF with ID {context.pdf_id_to_observe} not found in the response list."
+    assert observed_pdf is not None, (
+        f"PDF with ID {context.pdf_id_to_observe} not found in the response list."
+    )
     assert "parse_error_message" in observed_pdf, "PDF in response does not contain 'parse_error_message'."
     assert isinstance(observed_pdf.get("parse_error_message"), str), "Parse error message is not a string."
     assert len(observed_pdf.get("parse_error_message")) > 0, "Parse error message is empty."

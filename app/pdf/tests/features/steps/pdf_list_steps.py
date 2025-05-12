@@ -56,9 +56,9 @@ def step_impl(context):
     Verifies that the HTTP response status code is 200.
     Assumes context.response is set up.
     """
-    assert (
-        context.response.status_code == 200
-    ), f"Expected status code 200, but got {context.response.status_code}"
+    assert context.response.status_code == 200, (
+        f"Expected status code 200, but got {context.response.status_code}"
+    )
 
 
 @then("the response contains a paginated list of PDFs")
@@ -106,9 +106,9 @@ def step_impl(context):
     response_pdf_ids = [item.get("id") for item in data]
     expected_pdf_ids = [doc.id for doc in expected_pdfs]
 
-    assert sorted(response_pdf_ids) == sorted(
-        expected_pdf_ids
-    ), "PDF IDs in response do not match expected IDs."
+    assert sorted(response_pdf_ids) == sorted(expected_pdf_ids), (
+        "PDF IDs in response do not match expected IDs."
+    )
 
     # Further assertions can be added to check other fields like filename, upload_date, parse_status
 
@@ -279,9 +279,9 @@ def step_impl(context):
     response_pdf_ids = [item.get("id") for item in data]
     expected_pdf_ids_on_page = [doc.id for doc in expected_pdfs_on_page]
 
-    assert (
-        response_pdf_ids == expected_pdf_ids_on_page
-    ), "PDF IDs on the second page do not match expected IDs."
+    assert response_pdf_ids == expected_pdf_ids_on_page, (
+        "PDF IDs on the second page do not match expected IDs."
+    )
 
     # The ordering check is handled by the separate
     # "And the PDFs in the list are ordered by upload date descending" step.

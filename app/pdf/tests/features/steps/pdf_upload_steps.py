@@ -83,12 +83,12 @@ def step_impl(context):
         context.pdf_repo.get_pdf_binary_content(gridfs_file_id=pdf_doc.gridfs_file_id)
     )
 
-    assert (
-        binary_content is not None
-    ), f"PDF binary content with GridFS ID {pdf_doc.gridfs_file_id} not found."
-    assert (
-        binary_content == context.file_content
-    ), "Stored PDF binary content does not match the uploaded content."
+    assert binary_content is not None, (
+        f"PDF binary content with GridFS ID {pdf_doc.gridfs_file_id} not found."
+    )
+    assert binary_content == context.file_content, (
+        "Stored PDF binary content does not match the uploaded content."
+    )
 
 
 @then("the system stores the metadata in the database")
@@ -114,9 +114,9 @@ def step_impl(context):
     assert pdf_doc is not None, f"PDF metadata with ID {pdf_id} not found in the repository."
     assert pdf_doc.user_id == context.user_id, "Stored PDF metadata has incorrect user ID."
     assert pdf_doc.original_filename == context.file_name, "Stored PDF metadata has incorrect filename."
-    assert (
-        pdf_doc.parse_status == PDFParseStatus.UNPARSED
-    ), "Stored PDF metadata has incorrect initial parse status."
+    assert pdf_doc.parse_status == PDFParseStatus.UNPARSED, (
+        "Stored PDF metadata has incorrect initial parse status."
+    )
     # We can add more assertions here for other fields like upload_date if needed.
 
 
@@ -127,16 +127,16 @@ def step_impl(context):
     contains the ID of the newly created PDF.
     Assumes context.response is set up.
     """
-    assert (
-        context.response.status_code == 201
-    ), f"Expected status code 201, but got {context.response.status_code}"
+    assert context.response.status_code == 201, (
+        f"Expected status code 201, but got {context.response.status_code}"
+    )
 
     # Check the response body
     response_body = context.response.json()
     assert "id" in response_body, "Response body does not contain 'id'."
-    assert (
-        isinstance(response_body["id"], str) and len(response_body["id"]) > 0
-    ), "PDF ID in response is invalid."
+    assert isinstance(response_body["id"], str) and len(response_body["id"]) > 0, (
+        "PDF ID in response is invalid."
+    )
     # Optionally, check other fields in the response body if the schema is known
     # e.g., assert "original_filename" in response_body
     # assert response_body.get("original_filename") == context.file_name
@@ -199,6 +199,6 @@ def step_impl(context):
     Verifies that the HTTP response status code is 401.
     Assumes context.response is set up.
     """
-    assert (
-        context.response.status_code == 401
-    ), f"Expected status code 401, but got {context.response.status_code}"
+    assert context.response.status_code == 401, (
+        f"Expected status code 401, but got {context.response.status_code}"
+    )

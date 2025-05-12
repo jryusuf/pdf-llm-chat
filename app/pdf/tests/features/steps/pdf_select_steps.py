@@ -80,12 +80,12 @@ def step_impl(context):
         context.pdf_repo.get_pdf_meta_by_id(pdf_id=context.pdf_id_to_select, user_id=context.user_id)
     )
 
-    assert (
-        pdf_doc is not None
-    ), f"PDF metadata with ID {context.pdf_id_to_select} not found in the repository."
-    assert (
-        pdf_doc.is_selected_for_chat is True
-    ), f"Expected is_selected_for_chat to be True, but got {pdf_doc.is_selected_for_chat}"
+    assert pdf_doc is not None, (
+        f"PDF metadata with ID {context.pdf_id_to_select} not found in the repository."
+    )
+    assert pdf_doc.is_selected_for_chat is True, (
+        f"Expected is_selected_for_chat to be True, but got {pdf_doc.is_selected_for_chat}"
+    )
 
     # Verify that the mock repository's set_pdf_selected_for_chat method was called
     # Need to access the mock repo instance used by the service.
