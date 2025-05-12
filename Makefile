@@ -6,6 +6,7 @@ PIP := $(VENV_DIR)/bin/pip
 UVICORN := $(VENV_DIR)/bin/uvicorn
 PYTEST := $(VENV_DIR)/bin/pytest
 BEHAVE := $(VENV_DIR)/bin/behave
+BEHAVE_ACCOUNT := $(VENV_DIR)/bin/behave app/account/tests/features
 
 # Default target
 all: setup-dev install-dev
@@ -39,6 +40,8 @@ test: $(VENV_DIR)/bin/activate
 	$(PYTEST) --cov=app --cov-report=term-missing
 	@echo "\nRunning behave tests..."
 	$(BEHAVE)
+	@echo "\nRunning account service behave tests..."
+	$(BEHAVE_ACCOUNT)
 
 # Clean up virtual environment and __pycache__ directories
 clean:

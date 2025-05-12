@@ -12,3 +12,6 @@ aiosqlite>=0.20.0 # For potentially testing DB interactions without full Postgre
 # Development Tools
 pre-commit>=4.2.0 # For git hooks
 ruff>=0.11.9 # For linting/formatting
+pytest-asyncio
+mongomock_motor
+python-multipart
